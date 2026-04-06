@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
@@ -10,14 +10,15 @@ import {
   LogOut, 
   Trophy, 
   Gamepad2, 
-  ScanLine, 
   ChevronRight, 
   Sparkles,
   Leaf,
-  Clock
+  Recycle,
+  ArrowRight,
+  Quote
 } from 'lucide-react';
 
-// --- TIPE DATA (LOGIC TETAP SAMA) ---
+// --- TIPE DATA ---
 interface ItemData {
   _id: string;
   name: string;
@@ -43,23 +44,23 @@ interface ApiError {
   };
 }
 
-// --- LOADING SKELETON (Modern) ---
+// --- LOADING SKELETON ---
 const DashboardSkeleton = () => (
   <div className="mx-auto max-w-6xl px-6 py-8 space-y-8 animate-pulse relative z-10">
     <div className="flex justify-between items-center">
         <div className="flex gap-4">
-            <div className="h-16 w-16 rounded-full bg-white/20"></div>
+            <div className="h-16 w-16 rounded-full bg-emerald-900/10"></div>
             <div className="space-y-2">
-                <div className="h-4 w-24 rounded-full bg-white/20"></div>
-                <div className="h-8 w-48 rounded-full bg-white/30"></div>
+                <div className="h-4 w-24 rounded-full bg-emerald-900/10"></div>
+                <div className="h-8 w-48 rounded-full bg-emerald-900/20"></div>
             </div>
         </div>
     </div>
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-      <div className="md:col-span-8 h-96 rounded-[2.5rem] bg-white/20 backdrop-blur-sm"></div>
+      <div className="md:col-span-8 h-96 rounded-[2.5rem] bg-emerald-900/10 backdrop-blur-sm"></div>
       <div className="md:col-span-4 flex flex-col gap-6">
-        <div className="h-44 rounded-[2rem] bg-white/30 backdrop-blur-sm"></div>
-        <div className="h-44 rounded-[2rem] bg-white/30 backdrop-blur-sm"></div>
+        <div className="h-44 rounded-4xl bg-emerald-900/10 backdrop-blur-sm"></div>
+        <div className="h-44 rounded-4xl bg-emerald-900/10 backdrop-blur-sm"></div>
       </div>
     </div>
   </div>
@@ -86,7 +87,7 @@ export default function DashboardPage() {
   }, []);
 
   // 2. Fetch Data Profil
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     try {
       const response = await api.get('/auth/profile');
       setUser(response.data);
@@ -97,7 +98,7 @@ export default function DashboardPage() {
     } finally {
       setTimeout(() => setLoading(false), 800);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     const token = Cookies.get('token');
@@ -106,7 +107,7 @@ export default function DashboardPage() {
       return;
     }
     fetchUserProfile();
-  }, [router]);
+  }, [fetchUserProfile, router]);
 
   // Cek Absen Harian
   const hasCheckedInToday = () => {
@@ -193,10 +194,9 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-        <div className="min-h-screen bg-[#F0F5F3] relative overflow-hidden">
-             {/* Background Loading */}
-             <div className="absolute top-[-20%] left-[-20%] h-[800px] w-[800px] rounded-full bg-emerald-300/20 blur-[120px]"></div>
-             <div className="absolute bottom-[-20%] right-[-20%] h-[600px] w-[600px] rounded-full bg-teal-300/20 blur-[120px]"></div>
+        <div className="min-h-screen bg-[#fefaf0] relative overflow-hidden">
+             <div className="absolute top-[-20%] left-[-20%] h-200 w-200 rounded-full bg-emerald-300/20 blur-[120px]"></div>
+             <div className="absolute bottom-[-20%] right-[-20%] h-150 w-150 rounded-full bg-teal-300/20 blur-[120px]"></div>
              <div className="relative z-10 pt-10">
                  <DashboardSkeleton />
              </div>
@@ -208,21 +208,16 @@ export default function DashboardPage() {
   const isDoneToday = hasCheckedInToday();
 
   return (
-    <main className="min-h-screen bg-[#F4F7F6] pb-24 font-sans text-slate-800 selection:bg-emerald-200 relative overflow-hidden">
+    <main className="min-h-screen bg-[#fefaf0] pb-24 font-sans text-[#135433] selection:bg-[#8ac640]/30 relative overflow-hidden">
       <Toaster position="top-center" />
       
-      {/* === BACKGROUND PREMIUM (Wayground Style: Mesh Gradient) === */}
+      {/* Background Orbs */}
       <div className="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none">
-          {/* Base color lembut */}
-          <div className="absolute inset-0 bg-[#F4F7F6]"></div>
-          
-          {/* Orbs Warna yang 'Bernafas' */}
-          <div className="absolute top-[-10%] left-[-5%] w-[600px] h-[600px] rounded-full bg-emerald-200/40 blur-[100px] animate-pulse"></div>
-          <div className="absolute bottom-[0%] right-[-10%] w-[700px] h-[700px] rounded-full bg-teal-100/60 blur-[120px]"></div>
-          <div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] rounded-full bg-yellow-100/40 blur-[100px]"></div>
-          
-          {/* Noise Texture (Optional: Memberi kesan kertas/natural) */}
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
+          <div className="absolute inset-0 bg-[#fefaf0]"></div>
+          <div className="absolute top-[-10%] left-[-5%] w-150 h-150 rounded-full bg-[#8ac640]/10 blur-[100px] animate-pulse"></div>
+          <div className="absolute bottom-[0%] right-[-10%] w-175 h-175 rounded-full bg-emerald-100/40 blur-[120px]"></div>
+          <div className="absolute top-[40%] right-[20%] w-100 h-100 rounded-full bg-yellow-100/40 blur-[100px]"></div>
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light"></div>
       </div>
 
       <div className="mx-auto max-w-6xl px-6 py-8 space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -231,49 +226,47 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-5">
              <div className="relative group cursor-pointer">
-                {/* Glow Avatar */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 blur-md opacity-0 group-hover:opacity-60 transition-opacity duration-500"></div>
-                <div className="relative h-16 w-16 rounded-full p-0.5 bg-white shadow-lg border border-white/50">
-                    <div className="h-full w-full rounded-full bg-emerald-50 flex items-center justify-center overflow-hidden">
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.fullName}&backgroundColor=ecfdf5`} alt="Avatar" />
+                <div className="absolute inset-0 rounded-full bg-linear-to-tr from-[#8ac640] to-emerald-500 blur-md opacity-0 group-hover:opacity-60 transition-opacity duration-500"></div>
+                <div className="relative h-16 w-16 rounded-full p-0.5 bg-[#fefaf0] shadow-lg border-2 border-[#135433]">
+                    <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.fullName}&backgroundColor=fefaf0`} alt="Avatar" />
                     </div>
                 </div>
              </div>
              <div>
-                <p className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-0.5 flex items-center gap-1">
-                    {greeting} <Leaf className="w-3 h-3 fill-emerald-600" />
+                <p className="text-sm font-bold uppercase tracking-wider text-[#8ac640] mb-0.5 flex items-center gap-1">
+                    {greeting} <Leaf className="w-3 h-3 fill-[#8ac640]" />
                 </p>
-                <h1 className="text-3xl md:text-4xl font-black text-slate-800 truncate max-w-[200px] md:max-w-md tracking-tight">
+                <h1 className="text-3xl md:text-4xl font-black text-[#135433] truncate max-w-50 md:max-w-md tracking-tight">
                     {user.fullName}
                 </h1>
              </div>
           </div>
           
-          <button onClick={handleLogout} className="group flex items-center gap-3 rounded-full bg-white px-6 py-3 text-sm font-bold text-red-500 shadow-sm border border-red-50 transition-all hover:bg-red-500 hover:text-white hover:shadow-xl hover:-translate-y-0.5">
-               <LogOut className="w-4 h-4" />
+          <button onClick={handleLogout} className="group flex items-center gap-3 rounded-full bg-[#fefaf0] px-6 py-3 text-sm font-bold text-red-500 shadow-sm border-2 border-red-200 transition-all hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-xl hover:-translate-y-0.5">
+               <LogOut className="w-4 h-4 stroke-3" />
                <span>Keluar</span>
           </button>
         </div>
 
-        {/* === SECTION 1: HERO BOARD (Bento Grid) === */}
+        {/* === SECTION 1: HERO BOARD === */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
             
             {/* KARTU PARTNER UTAMA */}
-            <div className="md:col-span-8 relative overflow-hidden rounded-[2.5rem] bg-[#0F3930] text-white shadow-2xl shadow-emerald-900/20 group transition-transform hover:scale-[1.01] duration-500">
-                {/* Abstract Background Shapes inside Card */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#0F3930] to-[#064e3b]"></div>
-                <div className="absolute top-0 right-0 h-full w-3/4 bg-white/5 -skew-x-12 blur-3xl rounded-full translate-x-10"></div>
+            <div className="md:col-span-8 relative overflow-hidden rounded-[2.5rem] bg-[#135433] text-white shadow-xl shadow-emerald-900/10 group transition-transform hover:scale-[1.01] duration-500">
+                <div className="absolute inset-0 bg-linear-to-br from-[#135433] to-[#0a311d]"></div>
+                <div className="absolute top-0 right-0 h-full w-3/4 bg-[#8ac640]/10 -skew-x-12 blur-3xl rounded-full translate-x-10"></div>
                 <div className="absolute bottom-0 left-0 h-64 w-64 bg-emerald-500/20 rounded-full blur-[80px]"></div>
 
                 <div className="relative z-10 p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-8 h-full">
                     
                     {/* Kiri: Info & Stats */}
-                    <div className="flex-1 w-full flex flex-col justify-between h-full min-h-[260px]">
+                    <div className="flex-1 w-full flex flex-col justify-between h-full min-h-65">
                         <div>
-                            {/* Chip Status */}
-                            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 backdrop-blur-md border border-white/10 mb-5 shadow-inner">
-                                <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300 animate-pulse" />
-                                <span className="text-xs font-bold uppercase tracking-widest text-emerald-100">Partner Setia</span>
+                            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 backdrop-blur-md border border-[#8ac640]/30 mb-5 shadow-inner">
+                                <Sparkles className="w-4 h-4 text-[#8ac640] fill-[#8ac640] animate-pulse" />
+                                <span className="text-xs font-bold uppercase tracking-widest text-[#8ac640]">SETIA</span>
                             </div>
                             
                             <h3 className="text-4xl md:text-5xl font-black tracking-tight mb-3 drop-shadow-md text-white">
@@ -281,27 +274,25 @@ export default function DashboardPage() {
                             </h3>
                             
                             {user.activeItem ? (
-                                <p className="text-emerald-200/90 text-base font-medium flex items-center gap-2">
-                                    <span className={`h-3 w-3 rounded-full ${isDoneToday ? 'bg-green-400 shadow-[0_0_10px_#4ade80]' : 'bg-red-400 animate-pulse'}`}></span>
+                                <p className="text-emerald-100 text-base font-medium flex items-center gap-2">
+                                    <span className={`h-3 w-3 rounded-full ${isDoneToday ? 'bg-[#8ac640] shadow-[0_0_10px_#8ac640]' : 'bg-red-400 animate-pulse'}`}></span>
                                     Mood: <span className="text-white font-bold">{isDoneToday ? "Senang & Bersih ✨" : "Butuh Perhatian! ⚠️"}</span>
                                 </p>
                             ) : (
-                                <p className="text-emerald-200 text-base">Mulai perjalananmu dengan memilih partner.</p>
+                                <p className="text-emerald-200 text-base font-medium">Mulai perjalananmu dengan memilih partner.</p>
                             )}
                         </div>
 
-                        {/* Progress Bar & Tombol */}
                         {user.activeItem ? (
                             <div className="mt-auto pt-6 w-full max-w-sm">
                                 <div className="flex justify-between items-end text-sm font-bold text-emerald-100 mb-2">
-                                    <span className="bg-white/10 px-3 py-1 rounded-lg border border-white/10 backdrop-blur-md">LVL {user.activeItem.level}</span>
-                                    <span className="text-emerald-300">{user.activeItem.currentXp} <span className="text-white/40">/ {user.activeItem.nextLevelXp} XP</span></span>
+                                    <span className="bg-[#8ac640]/20 px-3 py-1 rounded-lg border border-[#8ac640]/30 backdrop-blur-md">LVL {user.activeItem.level}</span>
+                                    <span className="text-[#8ac640]">{user.activeItem.currentXp} <span className="text-white/40">/ {user.activeItem.nextLevelXp} XP</span></span>
                                 </div>
                                 
-                                {/* Bar XP */}
-                                <div className="h-5 w-full overflow-hidden rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 relative shadow-inner">
+                                <div className="h-5 w-full overflow-hidden rounded-full bg-black/30 backdrop-blur-sm border border-white/10 relative shadow-inner">
                                     <div 
-                                        className="h-full bg-gradient-to-r from-emerald-400 via-teal-400 to-green-300 relative transition-all duration-1000 ease-out flex items-center justify-end pr-1" 
+                                        className="h-full bg-linear-to-r from-[#8ac640] via-emerald-400 to-green-300 relative transition-all duration-1000 ease-out flex items-center justify-end pr-1" 
                                         style={{ width: `${xpPercentage}%` }}
                                     >
                                         <div className="h-full w-full absolute top-0 left-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)] animate-[shimmer_2s_infinite]"></div>
@@ -313,8 +304,8 @@ export default function DashboardPage() {
                                     disabled={checkInLoading || isDoneToday} 
                                     className={`mt-6 w-full flex items-center justify-center gap-3 rounded-2xl px-6 py-4 text-base font-bold transition-all shadow-xl active:scale-95 group/btn
                                         ${isDoneToday 
-                                            ? 'bg-emerald-950/40 text-emerald-500/50 cursor-not-allowed border border-white/5' 
-                                            : 'bg-white text-emerald-950 hover:bg-emerald-50 hover:shadow-emerald-500/20'
+                                            ? 'bg-black/20 text-white/50 cursor-not-allowed border border-white/5' 
+                                            : 'bg-[#8ac640] text-[#135433] hover:bg-[#9ad354] hover:shadow-[#8ac640]/20'
                                         }`}
                                 >
                                     {checkInLoading ? <span className="animate-spin">⏳</span> : isDoneToday ? <span>✅</span> : <span className="group-hover/btn:scale-125 transition-transform">💖</span>}
@@ -325,7 +316,7 @@ export default function DashboardPage() {
                             <div className="mt-8">
                                 <button 
                                     onClick={() => setShowSelectModal(true)} 
-                                    className="w-full md:w-auto rounded-2xl bg-white px-8 py-4 text-base font-bold text-emerald-900 shadow-xl hover:bg-emerald-50 hover:scale-105 transition-all animate-bounce"
+                                    className="w-full md:w-auto rounded-2xl bg-[#8ac640] px-8 py-4 text-base font-black text-[#135433] shadow-xl hover:bg-[#9ad354] hover:scale-105 transition-all animate-bounce"
                                 >
                                     + Pilih Partner Sekarang
                                 </button>
@@ -333,11 +324,9 @@ export default function DashboardPage() {
                         )}
                     </div>
 
-                    {/* Kanan: Visual Icon Besar */}
                     <div className="flex items-center justify-center relative mt-6 md:mt-0">
-                        {/* Glow Circle */}
-                        <div className="absolute inset-0 bg-emerald-400/20 rounded-full blur-3xl transform scale-150 animate-pulse"></div>
-                        <div className="relative h-48 w-48 md:h-56 md:w-56 flex items-center justify-center rounded-full bg-gradient-to-b from-white/10 to-white/5 border border-white/20 shadow-2xl backdrop-blur-md animate-float hover:scale-105 transition-transform duration-500">
+                        <div className="absolute inset-0 bg-[#8ac640]/20 rounded-full blur-3xl transform scale-150 animate-pulse"></div>
+                        <div className="relative h-48 w-48 md:h-56 md:w-56 flex items-center justify-center rounded-full bg-linear-to-b from-white/10 to-transparent border-4 border-[#8ac640]/30 shadow-2xl backdrop-blur-md animate-float hover:scale-105 transition-transform duration-500">
                             <span className="text-8xl md:text-9xl filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)] select-none transform hover:rotate-6 transition-transform cursor-pointer">
                                 {user.activeItem ? getItemIcon(user.activeItem.name) : '🌱'}
                             </span>
@@ -346,39 +335,39 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* KARTU STATISTIK (Vertical Stack) */}
+            {/* KARTU STATISTIK */}
             <div className="md:col-span-4 flex flex-col gap-6">
                 
                 {/* Coin Card */}
-                <div className="flex-1 rounded-[2.5rem] bg-white p-8 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] border border-white hover:shadow-xl hover:-translate-y-1 transition-all group relative overflow-hidden">
-                    <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-yellow-50 transition-transform group-hover:scale-150 duration-700"></div>
+                <div className="flex-1 rounded-[2.5rem] bg-[#fefaf0] p-8 shadow-md border-[6px] border-yellow-400 hover:shadow-xl hover:-translate-y-1 transition-all group relative overflow-hidden">
+                    <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-yellow-100 transition-transform group-hover:scale-150 duration-700 pointer-events-none"></div>
                     <div className="relative z-10 flex flex-col justify-between h-full gap-4">
                         <div className="flex items-center gap-4">
-                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-100 text-3xl shadow-inner group-hover:rotate-12 transition-transform duration-300">💰</div>
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#135433] text-yellow-300 text-3xl shadow-inner group-hover:rotate-12 transition-transform duration-300">💰</div>
                             <div>
-                                <span className="font-bold text-slate-400 text-xs uppercase tracking-wider block">Dompet Saya</span>
-                                <span className="font-bold text-slate-800 text-lg">Ijo Coins</span>
+                                <span className="font-bold text-[#8ac640] text-xs uppercase tracking-wider block">Dompet Saya</span>
+                                <span className="font-black text-[#135433] text-lg tracking-tight">Ijo Coins</span>
                             </div>
                         </div>
-                        <div className="border-t border-slate-50 pt-4">
-                             <span className="text-5xl font-black text-slate-800 tracking-tighter">{user.ijoCoins}</span>
+                        <div className="border-t-[3px] border-yellow-100/50 pt-4">
+                             <span className="text-5xl font-black text-[#135433] tracking-tighter">{user.ijoCoins}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Ticket Card */}
-                <div className="flex-1 rounded-[2.5rem] bg-white p-8 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] border border-white hover:shadow-xl hover:-translate-y-1 transition-all group relative overflow-hidden">
-                    <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-purple-50 transition-transform group-hover:scale-150 duration-700"></div>
+                <div className="flex-1 rounded-[2.5rem] bg-[#fefaf0] p-8 shadow-md border-[6px] border-[#8ac640] hover:shadow-xl hover:-translate-y-1 transition-all group relative overflow-hidden">
+                    <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-[#8ac640]/20 transition-transform group-hover:scale-150 duration-700 pointer-events-none"></div>
                     <div className="relative z-10 flex flex-col justify-between h-full gap-4">
                         <div className="flex items-center gap-4">
-                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100 text-3xl shadow-inner group-hover:-rotate-12 transition-transform duration-300">🎟️</div>
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#135433] text-[#8ac640] text-3xl shadow-inner group-hover:-rotate-12 transition-transform duration-300">🎟️</div>
                             <div>
-                                <span className="font-bold text-slate-400 text-xs uppercase tracking-wider block">Tiket Main</span>
-                                <span className="font-bold text-slate-800 text-lg">Game Ticket</span>
+                                <span className="font-bold text-[#8ac640] text-xs uppercase tracking-wider block">Tiket Main</span>
+                                <span className="font-black text-[#135433] text-lg tracking-tight">Ijo Tickets</span>
                             </div>
                         </div>
-                        <div className="border-t border-slate-50 pt-4">
-                             <span className="text-5xl font-black text-slate-800 tracking-tighter">{user.gameTickets}</span>
+                        <div className="border-t-[3px] border-[#8ac640]/30 pt-4">
+                             <span className="text-5xl font-black text-[#135433] tracking-tighter">{user.gameTickets}</span>
                         </div>
                     </div>
                 </div>
@@ -387,105 +376,161 @@ export default function DashboardPage() {
 
         {/* === SECTION 2: MENU AKTIVITAS === */}
         <div>
-            <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-                    <span className="bg-emerald-100 p-2 rounded-xl text-xl">🚀</span> 
-                    Misi Hari Ini
+            <div className="flex items-center justify-between mb-8 mt-4">
+                <h2 className="text-2xl font-black text-[#135433] flex items-center gap-3">
+                    <span className="bg-[#8ac640] text-[#135433] p-2 rounded-xl text-xl shadow-sm">🚀</span> 
+                    Aksi Hari Ini
                 </h2>
-                <Link href="/dashboard/game" className="flex items-center gap-1 text-sm font-bold text-emerald-600 hover:text-emerald-800 hover:underline transition-all">
-                    Lihat Semua <ChevronRight className="w-4 h-4" />
+                <Link href="/dashboard/game" className="flex items-center gap-1 text-sm font-bold text-[#8ac640] hover:text-[#135433] transition-colors">
+                    Lihat Semua <ChevronRight className="w-4 h-4 stroke-3" />
                 </Link>
             </div>
             
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                
                 {/* SCAN CARD */}
-                <Link href="/dashboard/scan" className="group relative overflow-hidden rounded-[2.5rem] bg-white p-1 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.05)] border border-white hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <Link href="/dashboard/scan" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#8ac640]/30 via-[#8ac640]/10 to-transparent rounded-bl-full pointer-events-none"></div>
                     <div className="relative z-10 p-8 flex flex-col h-full">
-                        <div className="h-16 w-16 mb-6 flex items-center justify-center rounded-3xl bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm duration-300">
-                            <ScanLine className="w-8 h-8" />
+                        <div className="h-20 w-20 mb-6 flex items-center justify-center rounded-3xl bg-[#135433] text-[#8ac640] group-hover:scale-105 transition-transform shadow-md duration-300">
+                            <Recycle className="w-10 h-10" />
                         </div>
-                        <h3 className="text-xl font-black text-slate-800 group-hover:text-blue-700 transition-colors">Scan Sampah AI</h3>
-                        <p className="text-sm text-slate-500 mt-3 leading-relaxed font-medium">Gunakan kamera untuk memilah jenis sampah secara otomatis.</p>
-                        <div className="mt-auto pt-6 flex items-center text-sm font-bold text-blue-600 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                            Mulai Scan Sekarang <ChevronRight className="w-4 h-4 ml-1" />
+                        <h3 className="text-3xl font-black text-[#135433] tracking-tight mb-2 uppercase">Pilah2</h3>
+                        <p className="text-sm text-[#135433]/70 font-bold mb-6 pr-2 leading-relaxed">
+                            Pindai sampahmu, temukan nilainya. Ubah sampah menjadi Tiket Emas untuk bumi.
+                        </p>
+                        <div className="mt-auto">
+                            <span className="inline-flex items-center text-sm font-black text-white bg-[#135433] px-5 py-2.5 rounded-full group-hover:bg-[#8ac640] group-hover:text-[#135433] transition-colors duration-300">
+                                PINDAI SEKARANG! <ChevronRight className="w-4 h-4 ml-1 stroke-3" />
+                            </span>
                         </div>
                     </div>
                 </Link>
 
                 {/* GAME CARD */}
-                <Link href="/dashboard/game" className="group relative overflow-hidden rounded-[2.5rem] bg-white p-1 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.05)] border border-white hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-fuchsia-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <Link href="/dashboard/game" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#135433] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#135433]/30 via-[#135433]/10 to-transparent rounded-bl-full pointer-events-none"></div>
                     <div className="relative z-10 p-8 flex flex-col h-full">
-                        <div className="h-16 w-16 mb-6 flex items-center justify-center rounded-3xl bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors shadow-sm duration-300">
-                            <Gamepad2 className="w-8 h-8" />
+                        <div className="h-20 w-20 mb-6 flex items-center justify-center rounded-3xl bg-[#135433] text-[#8ac640] group-hover:scale-105 transition-transform shadow-md duration-300">
+                            <Gamepad2 className="w-10 h-10" />
                         </div>
-                        <h3 className="text-xl font-black text-slate-800 group-hover:text-purple-700 transition-colors">Ijo Dash Game</h3>
-                        <p className="text-sm text-slate-500 mt-3 leading-relaxed font-medium">Mainkan game tangkap sampah, kumpulkan poin, dan raih tiket!</p>
-                        <div className="mt-auto pt-6 flex items-center text-sm font-bold text-purple-600 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                            Main Game <ChevronRight className="w-4 h-4 ml-1" />
+                        <h3 className="text-3xl font-black text-[#135433] tracking-tight mb-2 uppercase">Ijo Games</h3>
+                        <p className="text-sm text-[#135433]/70 font-bold mb-6 pr-2 leading-relaxed">
+                            Bermain dengan tujuan. Ubah kebiasaanmu dan naiki papan peringkat dampak global.
+                        </p>
+                        <div className="mt-auto">
+                            <span className="inline-flex items-center text-sm font-black text-[#8ac640] bg-[#135433] px-5 py-2.5 rounded-full group-hover:bg-[#8ac640] group-hover:text-[#135433] transition-colors duration-300">
+                                MAIN SEKARANG! <ChevronRight className="w-4 h-4 ml-1 stroke-3" />
+                            </span>
                         </div>
                     </div>
                 </Link>
 
                 {/* LEADERBOARD CARD */}
-                <Link href="/dashboard/leaderboard" className="group relative overflow-hidden rounded-[2.5rem] bg-white p-1 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.05)] border border-white hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-50 to-orange-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <Link href="/dashboard/leaderboard" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#8ac640]/30 via-[#8ac640]/10 to-transparent rounded-bl-full pointer-events-none"></div>
                     <div className="relative z-10 p-8 flex flex-col h-full">
-                        <div className="h-16 w-16 mb-6 flex items-center justify-center rounded-3xl bg-yellow-100 text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white transition-colors shadow-sm duration-300">
-                            <Trophy className="w-8 h-8" />
+                        <div className="h-20 w-20 mb-6 flex items-center justify-center rounded-3xl bg-[#135433] text-[#8ac640] group-hover:scale-105 transition-transform shadow-md duration-300">
+                            <Trophy className="w-10 h-10" />
                         </div>
-                        <h3 className="text-xl font-black text-slate-800 group-hover:text-yellow-700 transition-colors">Klasemen Juara</h3>
-                        <p className="text-sm text-slate-500 mt-3 leading-relaxed font-medium">Lihat siapa pahlawan lingkungan terbaik minggu ini!</p>
-                        <div className="mt-auto pt-6 flex items-center text-sm font-bold text-yellow-600 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                            Cek Peringkat <ChevronRight className="w-4 h-4 ml-1" />
+                        <h3 className="text-3xl font-black text-[#135433] tracking-tight mb-2 uppercase">Klasemen</h3>
+                        <p className="text-sm text-[#135433]/70 font-bold mb-6 pr-2 leading-relaxed">
+                            Cari tahu siapa Pahlawan Ijo minggu ini. Coba yang terbaik untuk berada di atas sana!
+                        </p>
+                        <div className="mt-auto">
+                            <span className="inline-flex items-center text-sm font-black text-white bg-[#135433] px-5 py-2.5 rounded-full group-hover:bg-[#8ac640] group-hover:text-[#135433] transition-colors duration-300">
+                                CEK PERINGKAT! <ChevronRight className="w-4 h-4 ml-1 stroke-3" />
+                            </span>
                         </div>
                     </div>
                 </Link>
             </div>
         </div>
 
-        {/* MODAL PILIH PARTNER (Visual Upgrade) */}
+        {/* === SECTION 3: ARTIKEL === */}
+        <div className="mt-20 bg-white rounded-[3.5rem] p-8 md:p-12 shadow-xl border-8 border-[#fefaf0] flex flex-col lg:flex-row gap-12 items-center">
+            {/* Kiri: Teks & CTA */}
+            <div className="flex-1 space-y-6">
+                <h2 className="text-4xl md:text-5xl font-black text-[#135433] uppercase leading-none tracking-tight">
+                    Baca Artikel <br /> <span className="text-[#8ac640]">Pilihan!</span>
+                </h2>
+                <p className="text-[#135433]/70 font-bold leading-relaxed">
+                    Temukan berbagai inspirasi, wawasan baru, dan panduan praktis untuk gaya hidup ramah lingkungan. Jadilah bagian dari perubahan dengan terus belajar dan membaca kebiasaan baru yang berkelanjutan.
+                </p>
+                <Link href="/tips" className="inline-flex items-center gap-2 px-8 py-4 rounded-full border-4 border-[#135433] text-[#135433] font-black hover:bg-[#135433] hover:text-[#8ac640] transition-colors shadow-sm active:scale-95 group">
+                    Baca di Web Kami! <ArrowRight className="w-5 h-5 stroke-[3] group-hover:translate-x-1 transition-transform" />
+                </Link>
+            </div>
+            
+            {/* Kanan: Grid Gambar & Quote */}
+            <div className="flex-1 w-full space-y-6">
+                {/* Masonry-style Images */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-3xl overflow-hidden aspect-[3/4] border-4 border-[#8ac640] shadow-md transform lg:-translate-y-4 transition-transform hover:scale-105">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=600&auto=format&fit=crop" alt="Menanam" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="rounded-3xl overflow-hidden aspect-[3/4] border-4 border-[#135433] shadow-md transform lg:translate-y-4 transition-transform hover:scale-105">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="https://images.unsplash.com/photo-1625314563148-572c6af9e9d5?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHBlbWJlcnNpaGFuJTIwbGluZ2t1bmdhbnxlbnwwfHwwfHx8MA%3D%3D" alt="Membersihkan" className="w-full h-full object-cover" />
+                    </div>
+                </div>
+                
+                {/* Quote Box */}
+                <div className="bg-[#fefaf0] border-4 border-[#8ac640]/30 rounded-3xl p-6 flex items-center gap-5 shadow-sm lg:mt-8">
+                    <div className="h-16 w-16 md:h-20 md:w-20 shrink-0 rounded-full overflow-hidden border-4 border-[#8ac640] shadow-sm">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="https://i.pravatar.cc/150?u=a042581f4e29026024d" alt="Author" className="w-full h-full object-cover"/>
+                    </div>
+                    <div className="flex-1 relative">
+                        <Quote className="absolute -top-3 -left-3 w-8 h-8 text-[#8ac640]/20 rotate-180" />
+                        <p className="text-[#135433] text-sm md:text-base font-bold italic relative z-10 leading-snug">
+                           &quot;Perubahan besar selalu dimulai dari langkah kecil. Mari rawat bumi kita hari ini, untuk senyum generasi di masa depan.&quot; 
+                        </p>
+                        <div className="mt-3 leading-none">
+                            <p className="font-black text-[#135433] text-sm">Bpk. Bebeck</p>
+                            <p className="text-[10px] font-bold text-[#8ac640] uppercase tracking-widest mt-1">Aktivis Lingkungan</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* MODAL PILIH PARTNER */}
         {showSelectModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-emerald-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-                <div className="w-full max-w-lg bg-white rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300 border-[6px] border-white/50 bg-clip-padding ring-1 ring-black/5">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#135433]/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                <div className="w-full max-w-lg bg-[#fefaf0] rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300 border-8 border-[#8ac640] bg-clip-padding">
                     <div className="text-center mb-10">
-                        <div className="h-20 w-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner border-4 border-white">
+                        <div className="h-20 w-20 bg-[#135433] text-[#8ac640] rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner border-4 border-[#8ac640]">
                             🎁
                         </div>
-                        <h2 className="text-3xl font-black text-slate-800">Pilih Partner Kamu</h2>
-                        <p className="text-slate-500 mt-2 font-medium">Pilih teman setia yang akan menemanimu menjaga bumi.</p>
+                        <h2 className="text-3xl font-black text-[#135433]">Pilih Partner Kamu</h2>
+                        <p className="text-[#135433]/70 mt-2 font-medium">Pilih teman setia yang akan menemanimu menjaga bumi.</p>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-5">
                         <button 
                             onClick={() => handleSelectItem('Tumbler')}
                             disabled={selectLoading}
-                            className="group relative flex flex-col items-center p-6 rounded-3xl border-2 border-slate-100 bg-slate-50 hover:border-blue-500 hover:bg-blue-50 transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95"
+                            className="group relative flex flex-col items-center p-6 rounded-3xl border-4 border-[#8ac640]/30 bg-white hover:border-[#8ac640] transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95"
                         >
-                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity">
-                                <div className="h-6 w-6 rounded-full border-2 border-blue-500 flex items-center justify-center text-[10px] font-bold">✓</div>
-                            </div>
                             <div className="text-6xl mb-4 group-hover:scale-110 transition-transform filter drop-shadow-md">🥤</div>
-                            <span className="font-bold text-lg text-slate-800 group-hover:text-blue-700">Si Botol Sakti</span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-2 bg-white px-2 py-1 rounded-lg border border-slate-200">Type: Tumbler</span>
+                            <span className="font-black text-lg text-[#135433] group-hover:text-[#8ac640]">Si Botol Sakti</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-2 bg-slate-100 px-2 py-1 rounded-lg">Type: Tumbler</span>
                         </button>
 
                         <button 
                             onClick={() => handleSelectItem('ToteBag')}
                             disabled={selectLoading}
-                            className="group relative flex flex-col items-center p-6 rounded-3xl border-2 border-slate-100 bg-slate-50 hover:border-purple-500 hover:bg-purple-50 transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95"
+                            className="group relative flex flex-col items-center p-6 rounded-3xl border-4 border-purple-400/30 bg-white hover:border-purple-400 transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95"
                         >
-                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-purple-500 transition-opacity">
-                                <div className="h-6 w-6 rounded-full border-2 border-purple-500 flex items-center justify-center text-[10px] font-bold">✓</div>
-                            </div>
                             <div className="text-6xl mb-4 group-hover:scale-110 transition-transform filter drop-shadow-md">🎒</div>
-                            <span className="font-bold text-lg text-slate-800 group-hover:text-purple-700">Tas Ajaib</span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-2 bg-white px-2 py-1 rounded-lg border border-slate-200">Type: Tote Bag</span>
+                            <span className="font-black text-lg text-[#135433] group-hover:text-purple-500">Tas Ajaib</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-2 bg-slate-100 px-2 py-1 rounded-lg">Type: Tote Bag</span>
                         </button>
                     </div>
                     
-                    <button onClick={() => setShowSelectModal(false)} className="mt-8 w-full py-4 text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors">
+                    <button onClick={() => setShowSelectModal(false)} className="mt-8 w-full py-4 text-[#135433]/50 font-bold text-sm hover:text-[#135433] transition-colors">
                         Saya mau pikir-pikir dulu...
                     </button>
                 </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
-import { ArrowLeft, Play, Trophy, Timer, Star, RefreshCw, ChevronRight, Brain, Leaf } from 'lucide-react';
+import { ArrowLeft, Play, Trophy, Timer, Star, RefreshCw, ChevronRight, Brain, Leaf, Loader2 } from 'lucide-react';
 import api from '@/lib/axios';
 
 // ============================================================================
@@ -25,7 +25,7 @@ const GAME_PRICE = 1;
 const TRASH_TYPES = [
   { type: 'Plastik', emoji: '🥤', color: 'text-blue-400' },
   { type: 'Kertas', emoji: '📄', color: 'text-yellow-200' },
-  { type: 'Organik', emoji: '🍎', color: 'text-green-400' },
+  { type: 'Organik', emoji: '🍎', color: 'text-[#8ac640]' },
   { type: 'Logam', emoji: '🥫', color: 'text-gray-400' },
 ] as const;
 
@@ -68,7 +68,6 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
   const sfxWrong = useRef<HTMLAudioElement | null>(null);
   const sfxOver = useRef<HTMLAudioElement | null>(null);
 
-  // --- AUDIO INIT ---
   useEffect(() => {
     bgmRef.current = new Audio('/sound/bgm-catcher.mp3'); 
     bgmRef.current.loop = true; 
@@ -120,8 +119,8 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
       try {
         const response = await api.get('/auth/profile');
         setUser(response.data);
-      } catch (error) {
-        console.error(error);
+      } catch (e) {
+        console.error(e);
       } finally {
         setLoadingData(false);
       }
@@ -131,7 +130,7 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
 
   const handleStartGame = async () => {
     if (!user || user.gameTickets < GAME_PRICE) {
-      toast.error('Tiket habis!');
+      toast.error('Tiket habis!', { icon: '🎟️' });
       return;
     }
     const toastId = toast.loading('Siap-siap...');
@@ -140,12 +139,10 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
       setUser(prev => prev ? ({ ...prev, gameTickets: prev.gameTickets - GAME_PRICE }) : null);
       toast.dismiss(toastId);
       
-      // --- PLAY MUSIC ---
       playBGM();
-
       startGameLoop();
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      console.error(e);
       toast.dismiss(toastId);
       toast.error('Gagal mulai game');
     }
@@ -172,7 +169,7 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
     toast(`Misi: Tangkap ${randomTarget.type}!`, { 
         icon: randomTarget.emoji,
         duration: 3000,
-        style: { background: '#333', color: '#fff' }
+        style: { background: '#fefaf0', color: '#135433', border: '2px solid #8ac640' }
     });
 
     const now = performance.now();
@@ -182,7 +179,7 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
     requestRef.current = requestAnimationFrame(gameLoop);
   };
 
-  const gameLoop = (timestamp: number) => {
+  const gameLoop = () => {
     if (livesRef.current <= 0 || timeRef.current <= 0) {
       endGame();
       return;
@@ -220,8 +217,6 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
             
             if (item.type === targetTypeRef.current.type) {
                 scoreRef.current += 10;
-                
-                // --- SFX CORRECT ---
                 playSfx('pop');
 
                 if (scoreRef.current % 100 === 0) {
@@ -231,14 +226,11 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
                 }
             } else {
                 livesRef.current -= 1;
-                
-                // --- SFX WRONG ---
                 playSfx('wrong');
-
                 if (navigator.vibrate) navigator.vibrate(200);
             }
         } else if (item.y > 120) {
-            // Missed
+            // Terlewat, abaikan
         } else {
             activeItems.push(item);
         }
@@ -265,13 +257,12 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
     return () => clearInterval(interval);
   }, [gameState]);
 
-  const endGame = async () => {
+  // Dibungkus useCallback untuk optimasi memory
+  const endGame = useCallback(async () => {
     if (requestRef.current) cancelAnimationFrame(requestRef.current);
     
-    // --- STOP BGM & PLAY OVER ---
     stopBGM();
     playSfx('over');
-
     setGameState('gameover');
     
     const finalScore = scoreRef.current;
@@ -285,11 +276,11 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
       if (user && finalScore > user.highScore) {
         setUser({ ...user, highScore: finalScore });
       }
-    } catch (error) {
-      console.error("Gagal simpan skor:", error);
+    } catch (e) {
+      console.error(e);
       toast.error("Gagal menyimpan skor");
     }
-  };
+  }, [user]);
 
   const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (gameState !== 'playing' || !gameAreaRef.current) return;
@@ -312,34 +303,34 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
     };
   }, []);
 
-  if (loadingData) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white"><div className="animate-spin text-4xl">⏳</div></div>;
+  if (loadingData) return <div className="min-h-screen bg-[#135433] flex items-center justify-center text-white"><Loader2 className="animate-spin text-4xl w-10 h-10 text-[#8ac640]" /></div>;
 
   return (
-    <div className="fixed inset-0 bg-gray-900 text-white font-sans overflow-hidden select-none touch-none z-50">
+    <div className="fixed inset-0 bg-[#0a311d] text-[#135433] font-sans overflow-hidden select-none touch-none z-50">
       <div 
         ref={gameAreaRef}
         onMouseMove={handleMove}
         onTouchMove={handleMove}
-        className="relative mx-auto max-w-md h-screen bg-gradient-to-b from-slate-800 to-slate-900 shadow-2xl overflow-hidden cursor-none"
+        className="relative mx-auto max-w-md h-screen bg-linear-to-b from-[#135433] to-[#0a311d] shadow-2xl overflow-hidden cursor-none"
       >
         {gameState === 'playing' && (
           <div className="absolute top-0 left-0 right-0 z-30 p-4 pointer-events-none">
-             <div className="flex justify-between items-center bg-slate-800/90 backdrop-blur border border-slate-600 rounded-2xl p-3 shadow-lg mb-4">
+             <div className="flex justify-between items-center bg-[#fefaf0]/95 backdrop-blur border-2 border-[#8ac640] rounded-2xl p-3 shadow-lg mb-4">
                 <div className="flex flex-col items-start">
-                    <span className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Target</span>
+                    <span className="text-[10px] text-[#135433]/60 uppercase font-black tracking-widest">Target</span>
                     <div className={`flex items-center gap-2 text-xl font-bold ${targetType.color} animate-pulse`}>
                         <span>{targetType.emoji}</span>
-                        <span>{targetType.type}</span>
+                        <span className="text-[#135433]">{targetType.type}</span>
                     </div>
                 </div>
-                <div className={`text-3xl font-black font-mono ${timeLeft <= 10 ? 'text-red-500 animate-bounce' : 'text-white'}`}>
+                <div className={`text-3xl font-black font-mono ${timeLeft <= 10 ? 'text-red-500 animate-bounce' : 'text-[#135433]'}`}>
                     {timeLeft}s
                 </div>
              </div>
              <div className="flex justify-between items-end">
                 <div>
-                    <span className="text-xs text-gray-500 font-bold">SKOR</span>
-                    <div className="text-5xl font-black text-yellow-400 drop-shadow-md leading-none">{scoreDisplay}</div>
+                    <span className="text-xs text-[#8ac640] font-black tracking-widest uppercase">Skor</span>
+                    <div className="text-5xl font-black text-white drop-shadow-md leading-none">{scoreDisplay}</div>
                 </div>
                 <div className="flex gap-1 text-2xl">
                    {[...Array(3)].map((_, i) => (
@@ -359,40 +350,40 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
         {gameState === 'playing' && (
           <div style={{ left: `${basketX}%` }} className="absolute bottom-[8%] -translate-x-1/2 w-28 h-24 z-20 pointer-events-none will-change-transform">
              <div className="w-full h-full relative">
-                <div className="absolute bottom-0 w-full h-4/5 bg-emerald-600 rounded-b-3xl rounded-t-lg border-b-4 border-emerald-900 shadow-[0_0_30px_rgba(16,185,129,0.3)] flex items-center justify-center">
+                <div className="absolute bottom-0 w-full h-4/5 bg-[#fefaf0] rounded-b-3xl rounded-t-lg border-b-8 border-[#8ac640] shadow-xl flex items-center justify-center">
                     <span className="text-4xl">🗑️</span>
                 </div>
-                <div className="absolute top-0 w-full h-3 bg-emerald-400/50 blur-sm rounded-full animate-pulse"></div>
+                <div className="absolute top-0 w-full h-3 bg-[#8ac640] blur-sm rounded-full animate-pulse"></div>
              </div>
           </div>
         )}
 
         {gameState === 'menu' && (
-           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/90 backdrop-blur-sm p-8 text-center animate-in fade-in">
+           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#135433]/90 backdrop-blur-sm p-8 text-center animate-in fade-in">
               <div className="text-7xl mb-4 animate-bounce">♻️</div>
-              <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-600 mb-2">IJO CATCHER</h1>
-              <p className="text-gray-400 mb-8 max-w-xs text-sm">Tangkap sampah sesuai target!<br/><span className="text-yellow-400 font-bold">Waktu: 60 Detik</span></p>
+              <h1 className="text-4xl font-black text-transparent bg-clip-text bg-linear-to-r from-[#8ac640] to-emerald-300 mb-2">IJO CATCHER</h1>
+              <p className="text-[#fefaf0]/80 mb-8 max-w-xs text-sm">Tangkap sampah sesuai target!<br/><span className="text-[#8ac640] font-bold">Waktu: 60 Detik</span></p>
               
-              <button onClick={handleStartGame} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-bold text-xl text-white shadow-lg shadow-emerald-500/20 active:scale-95 transition-all mb-4">
+              <button onClick={handleStartGame} className="w-full py-4 bg-[#8ac640] hover:bg-[#9ad354] rounded-2xl font-black text-xl text-[#135433] shadow-lg shadow-[#8ac640]/20 active:scale-95 transition-all mb-4">
                 MULAI MAIN (-1 Tiket)
               </button>
-              <button onClick={onBack} className="text-sm text-gray-500 hover:text-white transition-colors">
+              <button onClick={onBack} className="text-sm font-bold text-[#fefaf0]/50 hover:text-white transition-colors">
                 Kembali ke Menu Game
               </button>
            </div>
         )}
 
         {gameState === 'gameover' && (
-           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-xl p-8 text-center animate-in fade-in zoom-in duration-300">
+           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#135433]/95 backdrop-blur-xl p-8 text-center animate-in fade-in zoom-in duration-300">
               <div className="text-6xl mb-4">🏁</div>
-              <h2 className="text-3xl font-bold text-white mb-2">SELESAI!</h2>
+              <h2 className="text-3xl font-black text-white mb-2">SELESAI!</h2>
               <div className="flex flex-col items-center gap-2 mb-10 bg-white/5 p-6 rounded-3xl border border-white/10 w-full">
-                <span className="text-gray-500 text-xs uppercase font-bold tracking-widest">Skor Akhir</span>
-                <span className="text-6xl font-black text-yellow-400 drop-shadow-xl">{scoreRef.current}</span>
+                <span className="text-[#8ac640] text-xs uppercase font-black tracking-widest">Skor Akhir</span>
+                <span className="text-6xl font-black text-white drop-shadow-xl">{scoreRef.current}</span>
               </div>
               <div className="flex flex-col gap-3 w-full">
-                <button onClick={() => setGameState('menu')} className="w-full py-4 bg-white text-slate-900 font-bold rounded-2xl hover:bg-gray-200 transition-colors">Main Lagi</button>
-                <button onClick={onBack} className="w-full py-4 bg-transparent border border-white/20 rounded-2xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors">Pilih Game Lain</button>
+                <button onClick={() => setGameState('menu')} className="w-full py-4 bg-[#8ac640] text-[#135433] font-black rounded-2xl hover:bg-[#9ad354] transition-colors">Main Lagi</button>
+                <button onClick={onBack} className="w-full py-4 bg-transparent border-2 border-[#8ac640]/50 rounded-2xl hover:bg-[#8ac640]/10 text-[#fefaf0] transition-colors font-bold">Pilih Game Lain</button>
               </div>
            </div>
         )}
@@ -402,10 +393,9 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
 }
 
 // ============================================================================
-// GAME 2: NEURO SNAKE (FIXED)
+// GAME 2: NEURO SNAKE
 // ============================================================================
 
-const GRID_SIZE = 20;
 const CELL_COUNT = 20;
 
 function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
@@ -415,10 +405,10 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
   
   const [snake, setSnake] = useState<{x: number, y: number}[]>([{ x: 10, y: 10 }]);
   const [food, setFood] = useState<{x: number, y: number}>({ x: 5, y: 5 });
-  const [direction, setDirection] = useState<'UP' | 'DOWN' | 'LEFT' | 'RIGHT'>('UP');
   const [score, setScore] = useState(0);
 
   const directionRef = useRef<'UP' | 'DOWN' | 'LEFT' | 'RIGHT'>('UP');
+  const scoreRef = useRef(0);
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -426,7 +416,7 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
       try {
         const response = await api.get('/auth/profile');
         setUser(response.data);
-      } catch (error) { console.error(error); } 
+      } catch (e) { console.error(e); } 
       finally { setLoadingData(false); }
     };
     fetchProfile();
@@ -441,7 +431,7 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
 
   const handleStartGame = async () => {
     if (!user || user.gameTickets < GAME_PRICE) {
-      toast.error('Tiket habis!');
+      toast.error('Tiket habis!', { icon: '🎟️' });
       return;
     }
     const toastId = toast.loading('Memulai Neuro Snake...');
@@ -450,7 +440,8 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
       setUser(prev => prev ? ({ ...prev, gameTickets: prev.gameTickets - GAME_PRICE }) : null);
       toast.dismiss(toastId);
       startGameLoop();
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       toast.dismiss(toastId);
       toast.error('Gagal mulai game');
     }
@@ -460,25 +451,25 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
     setSnake([{ x: 10, y: 10 }, { x: 10, y: 11 }, { x: 10, y: 12 }]);
     setFood(generateFood());
     setScore(0);
-    setDirection('UP');
+    scoreRef.current = 0;
     directionRef.current = 'UP';
     setGameState('playing');
   };
 
-  const endGame = async () => {
+  const endGame = useCallback(async () => {
     if (gameLoopRef.current) clearInterval(gameLoopRef.current);
     setGameState('gameover');
     try {
       await api.post('/games/score', { 
-        score: score, 
+        score: scoreRef.current, 
         gameType: 'snake' 
       });
 
-      if (user && score > user.highScore) {
-        setUser({ ...user, highScore: score });
+      if (user && scoreRef.current > user.highScore) {
+        setUser({ ...user, highScore: scoreRef.current });
       }
-    } catch (error) { console.error(error); }
-  };
+    } catch (e) { console.error(e); }
+  }, [user]);
 
   useEffect(() => {
     if (gameState !== 'playing') return;
@@ -508,7 +499,8 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
         const newSnake = [newHead, ...prevSnake];
 
         if (newHead.x === food.x && newHead.y === food.y) {
-          setScore(s => s + 10);
+          scoreRef.current += 10;
+          setScore(scoreRef.current);
           setFood(generateFood());
         } else {
           newSnake.pop();
@@ -520,7 +512,7 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
 
     gameLoopRef.current = setInterval(moveSnake, 150);
     return () => { if (gameLoopRef.current) clearInterval(gameLoopRef.current); };
-  }, [gameState, food]);
+  }, [gameState, food, endGame]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -543,57 +535,57 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
     if (d === 'RIGHT' && directionRef.current !== 'LEFT') directionRef.current = 'RIGHT';
   };
 
-  if (loadingData) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white"><div className="animate-spin text-4xl">⏳</div></div>;
+  if (loadingData) return <div className="min-h-screen bg-[#135433] flex items-center justify-center text-white"><Loader2 className="animate-spin text-4xl w-10 h-10 text-[#8ac640]" /></div>;
 
   return (
-    <div className="fixed inset-0 bg-slate-900 text-white font-sans overflow-hidden touch-none z-50 flex flex-col items-center">
+    <div className="fixed inset-0 bg-[#0a311d] text-[#fefaf0] font-sans overflow-hidden touch-none z-50 flex flex-col items-center">
       {gameState === 'menu' && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 p-8 text-center animate-in fade-in">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#135433] p-8 text-center animate-in fade-in">
           <div className="text-7xl mb-4 animate-bounce">🐍</div>
-          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500 mb-2">NEURO SNAKE</h1>
-          <p className="text-gray-400 mb-8 max-w-xs text-sm">Makan sampah organik untuk tumbuh.<br/><span className="text-emerald-400 font-bold">Jangan tabrak dinding!</span></p>
+          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-linear-to-r from-[#8ac640] to-emerald-300 mb-2">NEURO SNAKE</h1>
+          <p className="text-[#fefaf0]/80 mb-8 max-w-xs text-sm">Makan sampah organik untuk tumbuh.<br/><span className="text-[#8ac640] font-bold">Jangan tabrak dinding!</span></p>
           
-          <button onClick={handleStartGame} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-bold text-xl text-white shadow-lg shadow-emerald-500/20 active:scale-95 transition-all mb-4">MULAI MAIN (-1 Tiket)</button>
-          <button onClick={onBack} className="text-sm text-gray-500 hover:text-white">Kembali</button>
+          <button onClick={handleStartGame} className="w-full py-4 bg-[#8ac640] hover:bg-[#9ad354] rounded-2xl font-black text-xl text-[#135433] shadow-lg shadow-[#8ac640]/20 active:scale-95 transition-all mb-4">MULAI MAIN (-1 Tiket)</button>
+          <button onClick={onBack} className="text-sm font-bold text-[#fefaf0]/50 hover:text-white">Kembali</button>
         </div>
       )}
 
       {gameState === 'playing' && (
         <>
-            <div className="w-full max-w-md p-4 flex justify-between items-center bg-slate-800 shadow-lg z-10">
-                <div className="font-bold text-emerald-400 flex items-center gap-2"><Trophy className="w-4 h-4"/> {score}</div>
-                <div className="text-xs text-gray-400">Swipe or use Arrows</div>
+            <div className="w-full max-w-md p-4 flex justify-between items-center bg-[#135433] shadow-lg z-10 border-b-4 border-[#8ac640]">
+                <div className="font-black text-[#8ac640] flex items-center gap-2"><Trophy className="w-5 h-5"/> {score}</div>
+                <div className="text-xs font-bold text-[#fefaf0]/60">Swipe / Arrows to Move</div>
             </div>
 
-            <div className="relative w-full max-w-md aspect-square bg-slate-800 border-4 border-slate-700 mt-4 rounded-lg overflow-hidden">
+            <div className="relative w-full max-w-md aspect-square bg-[#0a311d] border-4 border-[#135433] mt-4 rounded-3xl overflow-hidden shadow-inner">
                 {snake.map((segment, i) => (
-                    <div key={i} style={{ left: `${segment.x * 5}%`, top: `${segment.y * 5}%` }} className={`absolute w-[5%] h-[5%] ${i === 0 ? 'bg-emerald-400 rounded-sm z-20' : 'bg-emerald-600/80 rounded-sm z-10'}`}></div>
+                    <div key={i} style={{ left: `${segment.x * 5}%`, top: `${segment.y * 5}%` }} className={`absolute w-[5%] h-[5%] ${i === 0 ? 'bg-[#8ac640] rounded-sm z-20 shadow-md' : 'bg-[#8ac640]/80 rounded-sm z-10'}`}></div>
                 ))}
                 <div style={{ left: `${food.x * 5}%`, top: `${food.y * 5}%` }} className="absolute w-[5%] h-[5%] bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_red] flex items-center justify-center text-[10px]">🍎</div>
             </div>
 
             {/* Mobile Controls */}
-            <div className="grid grid-cols-3 gap-2 mt-8 w-full max-w-[200px]">
+            <div className="grid grid-cols-3 gap-2 mt-8 w-full max-w-60">
                 <div></div>
-                <button onPointerDown={() => setDir('UP')} className="h-14 bg-slate-700 rounded-xl active:bg-emerald-500 flex items-center justify-center">⬆️</button>
+                <button onPointerDown={() => setDir('UP')} className="h-16 bg-[#135433] rounded-2xl active:bg-[#8ac640] flex items-center justify-center border-b-4 border-[#0a311d] shadow-sm">⬆️</button>
                 <div></div>
-                <button onPointerDown={() => setDir('LEFT')} className="h-14 bg-slate-700 rounded-xl active:bg-emerald-500 flex items-center justify-center">⬅️</button>
-                <button onPointerDown={() => setDir('DOWN')} className="h-14 bg-slate-700 rounded-xl active:bg-emerald-500 flex items-center justify-center">⬇️</button>
-                <button onPointerDown={() => setDir('RIGHT')} className="h-14 bg-slate-700 rounded-xl active:bg-emerald-500 flex items-center justify-center">➡️</button>
+                <button onPointerDown={() => setDir('LEFT')} className="h-16 bg-[#135433] rounded-2xl active:bg-[#8ac640] flex items-center justify-center border-b-4 border-[#0a311d] shadow-sm">⬅️</button>
+                <button onPointerDown={() => setDir('DOWN')} className="h-16 bg-[#135433] rounded-2xl active:bg-[#8ac640] flex items-center justify-center border-b-4 border-[#0a311d] shadow-sm">⬇️</button>
+                <button onPointerDown={() => setDir('RIGHT')} className="h-16 bg-[#135433] rounded-2xl active:bg-[#8ac640] flex items-center justify-center border-b-4 border-[#0a311d] shadow-sm">➡️</button>
             </div>
         </>
       )}
 
       {gameState === 'gameover' && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-xl p-8 text-center animate-in fade-in zoom-in">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#135433]/95 backdrop-blur-xl p-8 text-center animate-in fade-in zoom-in">
            <div className="text-6xl mb-4">💥</div>
-           <h2 className="text-3xl font-bold text-white mb-2">GAME OVER</h2>
+           <h2 className="text-3xl font-black text-white mb-2">GAME OVER</h2>
            <div className="flex flex-col items-center gap-2 mb-10 bg-white/5 p-6 rounded-3xl border border-white/10 w-full">
-             <span className="text-gray-500 text-xs uppercase font-bold tracking-widest">Skor Akhir</span>
-             <span className="text-6xl font-black text-yellow-400 drop-shadow-xl">{score}</span>
+             <span className="text-[#8ac640] text-xs uppercase font-black tracking-widest">Skor Akhir</span>
+             <span className="text-6xl font-black text-white drop-shadow-xl">{score}</span>
            </div>
-           <button onClick={() => setGameState('menu')} className="w-full py-4 bg-white text-slate-900 font-bold rounded-2xl hover:bg-gray-200 mb-3">Main Lagi</button>
-           <button onClick={onBack} className="w-full py-4 bg-transparent border border-white/20 rounded-2xl hover:bg-white/5 text-gray-400 hover:text-white">Keluar</button>
+           <button onClick={() => setGameState('menu')} className="w-full py-4 bg-[#8ac640] text-[#135433] font-black rounded-2xl hover:bg-[#9ad354] mb-3">Main Lagi</button>
+           <button onClick={onBack} className="w-full py-4 bg-transparent border-2 border-[#8ac640]/50 rounded-2xl hover:bg-[#8ac640]/10 text-white font-bold">Keluar</button>
         </div>
       )}
     </div>
@@ -601,18 +593,18 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
 }
 
 // ============================================================================
-// GAME 3: ECO QUIZ (FIXED)
+// GAME 3: ECO QUIZ
 // ============================================================================
 
 const QUESTIONS = [
-    { q: "Sampah plastik butuh berapa lama untuk terurai?", options: ["50 tahun", "100 tahun", "400+ tahun", "1 minggu"], ans: 2 },
-    { q: "Apa warna tempat sampah untuk organik?", options: ["Hijau", "Kuning", "Merah", "Biru"], ans: 0 },
-    { q: "Manakah yang BUKAN gas rumah kaca?", options: ["Karbondioksida", "Metana", "Oksigen", "Nitrogen Oksida"], ans: 2 },
-    { q: "3R dalam pengelolaan sampah adalah...", options: ["Read, Run, Rest", "Reduce, Reuse, Recycle", "Race, Ride, Rise", "Rose, Rice, Rain"], ans: 1 },
-    { q: "Limbah B3 adalah limbah yang...", options: ["Berbau wangi", "Berbahaya & Beracun", "Bersih & Berkilau", "Basah & Bau"], ans: 1 },
-    { q: "Energi terbarukan contohnya...", options: ["Batubara", "Minyak Bumi", "Sinar Matahari", "Gas Alam"], ans: 2 },
-    { q: "Apa dampak utama penebangan hutan liar?", options: ["Tanah subur", "Banjir & Longsor", "Udara bersih", "Hewan senang"], ans: 1 },
-    { q: "Berapa persen permukaan bumi tertutup air?", options: ["30%", "50%", "71%", "90%"], ans: 2 },
+  { q: "Sampah plastik butuh berapa lama untuk terurai?", options: ["50 tahun", "100 tahun", "400+ tahun", "1 minggu"], ans: 2 },
+  { q: "Apa warna tempat sampah untuk organik?", options: ["Hijau", "Kuning", "Merah", "Biru"], ans: 0 },
+  { q: "Manakah yang BUKAN gas rumah kaca?", options: ["Karbondioksida", "Metana", "Oksigen", "Nitrogen Oksida"], ans: 2 },
+  { q: "3R dalam pengelolaan sampah adalah...", options: ["Read, Run, Rest", "Reduce, Reuse, Recycle", "Race, Ride, Rise", "Rose, Rice, Rain"], ans: 1 },
+  { q: "Limbah B3 adalah limbah yang...", options: ["Berbau wangi", "Berbahaya & Beracun", "Bersih & Berkilau", "Basah & Bau"], ans: 1 },
+  { q: "Energi terbarukan contohnya...", options: ["Batubara", "Minyak Bumi", "Sinar Matahari", "Gas Alam"], ans: 2 },
+  { q: "Apa dampak utama penebangan hutan liar?", options: ["Tanah subur", "Banjir & Longsor", "Udara bersih", "Hewan senang"], ans: 1 },
+  { q: "Berapa persen permukaan bumi tertutup air?", options: ["30%", "50%", "71%", "90%"], ans: 2 },
 ];
 
 function EcoQuizGame({ onBack }: { onBack: () => void }) {
@@ -624,13 +616,14 @@ function EcoQuizGame({ onBack }: { onBack: () => void }) {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const scoreRef = useRef(0);
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const response = await api.get('/auth/profile');
         setUser(response.data);
-      } catch (error) { console.error(error); } 
+      } catch (e) { console.error(e); } 
       finally { setLoadingData(false); }
     };
     fetchProfile();
@@ -638,7 +631,7 @@ function EcoQuizGame({ onBack }: { onBack: () => void }) {
 
   const handleStartGame = async () => {
     if (!user || user.gameTickets < GAME_PRICE) {
-        toast.error('Tiket habis!');
+        toast.error('Tiket habis!', { icon: '🎟️' });
         return;
     }
     const toastId = toast.loading('Loading Quiz...');
@@ -647,7 +640,8 @@ function EcoQuizGame({ onBack }: { onBack: () => void }) {
         setUser(prev => prev ? ({ ...prev, gameTickets: prev.gameTickets - GAME_PRICE }) : null);
         toast.dismiss(toastId);
         startGameLogic();
-    } catch (error) {
+    } catch (e) {
+        console.error(e);
         toast.dismiss(toastId);
         toast.error('Gagal mulai game');
     }
@@ -655,10 +649,26 @@ function EcoQuizGame({ onBack }: { onBack: () => void }) {
 
   const startGameLogic = () => {
       setScore(0);
+      scoreRef.current = 0;
       setCurrentQ(0);
       setTimeLeft(60);
       setGameState('playing');
   };
+
+  const endGameSafe = useCallback(async () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setGameState('gameover');
+      try {
+          await api.post('/games/score', { 
+            score: scoreRef.current,
+            gameType: 'quiz' 
+          });
+
+          if (user && scoreRef.current > user.highScore) {
+             setUser({ ...user, highScore: scoreRef.current });
+          }
+      } catch (e) { console.error(e); }
+  }, [user]);
 
   useEffect(() => {
       if (gameState === 'playing') {
@@ -673,12 +683,13 @@ function EcoQuizGame({ onBack }: { onBack: () => void }) {
           }, 1000);
       }
       return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [gameState]);
+  }, [gameState, endGameSafe]);
 
   const handleAnswer = (idx: number) => {
       const isCorrect = idx === QUESTIONS[currentQ].ans;
       if (isCorrect) {
-          setScore(s => s + 20);
+          scoreRef.current += 20;
+          setScore(scoreRef.current);
           toast.success('Benar! +20', { duration: 1000, position: 'top-center', icon: '✅' });
       } else {
           toast.error('Salah!', { duration: 1000, position: 'top-center' });
@@ -692,65 +703,47 @@ function EcoQuizGame({ onBack }: { onBack: () => void }) {
       }
   };
 
-  const scoreRef = useRef(0);
-  useEffect(() => { scoreRef.current = score; }, [score]);
-  
-  const endGameSafe = async () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      setGameState('gameover');
-      try {
-          await api.post('/games/score', { 
-            score: scoreRef.current,
-            gameType: 'quiz' 
-          });
-
-          if (user && scoreRef.current > user.highScore) {
-             setUser({ ...user, highScore: scoreRef.current });
-          }
-      } catch (e) { console.error(e); }
-  };
-
-  if (loadingData) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white"><div className="animate-spin text-4xl">⏳</div></div>;
+  if (loadingData) return <div className="min-h-screen bg-[#135433] flex items-center justify-center text-white"><Loader2 className="animate-spin text-4xl w-10 h-10 text-[#8ac640]" /></div>;
 
   return (
-      <div className="fixed inset-0 bg-slate-900 text-white font-sans overflow-hidden touch-none z-50 flex flex-col items-center">
+      <div className="fixed inset-0 bg-[#0a311d] text-[#135433] font-sans overflow-hidden touch-none z-50 flex flex-col items-center">
           {gameState === 'menu' && (
-             <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 p-8 text-center animate-in fade-in">
+             <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#135433] p-8 text-center animate-in fade-in">
                 <div className="text-7xl mb-4 animate-bounce">🧠</div>
-                <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 mb-2">ECO QUIZ</h1>
-                <p className="text-gray-400 mb-8 max-w-xs text-sm">Jawab pertanyaan lingkungan secepat mungkin!<br/><span className="text-blue-400 font-bold">Waktu: 60 Detik</span></p>
+                <h1 className="text-4xl font-black text-transparent bg-clip-text bg-linear-to-r from-[#8ac640] to-emerald-300 mb-2">ECO QUIZ</h1>
+                <p className="text-[#fefaf0]/80 mb-8 max-w-xs text-sm">Jawab pertanyaan lingkungan secepat mungkin!<br/><span className="text-[#8ac640] font-bold">Waktu: 60 Detik</span></p>
                 
-                <button onClick={handleStartGame} className="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl font-bold text-xl text-white shadow-lg shadow-blue-500/20 active:scale-95 transition-all mb-4">MULAI MAIN (-1 Tiket)</button>
-                <button onClick={onBack} className="text-sm text-gray-500 hover:text-white">Kembali</button>
+                <button onClick={handleStartGame} className="w-full py-4 bg-[#8ac640] hover:bg-[#9ad354] rounded-2xl font-black text-xl text-[#135433] shadow-lg shadow-[#8ac640]/20 active:scale-95 transition-all mb-4">MULAI MAIN (-1 Tiket)</button>
+                <button onClick={onBack} className="text-sm font-bold text-[#fefaf0]/50 hover:text-white">Kembali</button>
              </div>
           )}
 
           {gameState === 'playing' && (
-              <div className="w-full h-full max-w-md bg-slate-800 flex flex-col p-6">
-                 <div className="flex justify-between items-center mb-8">
+              <div className="w-full h-full max-w-md bg-[#fefaf0] flex flex-col p-6 rounded-3xl mt-4 mb-4 shadow-2xl">
+                 <div className="flex justify-between items-center mb-8 border-b-4 border-[#8ac640] pb-4">
                      <div className="flex flex-col">
-                         <span className="text-xs text-gray-400 font-bold uppercase">Skor</span>
-                         <span className="text-3xl font-black text-yellow-400">{score}</span>
+                         <span className="text-xs text-[#135433]/50 font-black uppercase tracking-widest">Skor</span>
+                         <span className="text-4xl font-black text-[#135433]">{score}</span>
                      </div>
-                     <div className="flex items-center gap-2 bg-slate-700 px-4 py-2 rounded-full border border-slate-600">
-                         <Timer className="w-4 h-4 text-white"/>
-                         <span className={`font-mono font-bold text-xl ${timeLeft < 10 ? 'text-red-500' : 'text-white'}`}>{timeLeft}s</span>
+                     <div className="flex items-center gap-2 bg-[#135433] px-4 py-2 rounded-full border-2 border-[#8ac640] shadow-sm">
+                         <Timer className="w-5 h-5 text-[#8ac640]"/>
+                         <span className={`font-mono font-black text-xl ${timeLeft < 10 ? 'text-red-400 animate-pulse' : 'text-[#fefaf0]'}`}>{timeLeft}s</span>
                      </div>
                  </div>
 
                  <div className="flex-1 flex flex-col justify-center">
-                    <div className="mb-2 text-xs text-blue-400 font-bold tracking-widest uppercase">Pertanyaan {currentQ + 1}/{QUESTIONS.length}</div>
-                    <h2 className="text-2xl font-bold text-white mb-8 leading-relaxed">{QUESTIONS[currentQ].q}</h2>
+                    <div className="mb-3 text-xs text-[#8ac640] font-black tracking-widest uppercase">Pertanyaan {currentQ + 1}/{QUESTIONS.length}</div>
+                    <h2 className="text-2xl font-black text-[#135433] mb-8 leading-relaxed">{QUESTIONS[currentQ].q}</h2>
 
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-4">
                         {QUESTIONS[currentQ].options.map((opt, idx) => (
                             <button 
                                 key={idx} 
                                 onClick={() => handleAnswer(idx)}
-                                className="w-full p-4 rounded-xl bg-slate-700 hover:bg-slate-600 border border-slate-600 text-left transition-all active:scale-95 flex justify-between items-center group"
+                                className="w-full p-5 rounded-2xl bg-white hover:bg-[#8ac640]/10 border-2 border-gray-200 hover:border-[#8ac640] text-left transition-all active:scale-95 flex justify-between items-center group shadow-sm"
                             >
-                                <span className="font-semibold text-gray-200">{opt}</span>
-                                <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white"/>
+                                <span className="font-bold text-[#135433] group-hover:text-[#135433]">{opt}</span>
+                                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#8ac640]"/>
                             </button>
                         ))}
                     </div>
@@ -759,15 +752,15 @@ function EcoQuizGame({ onBack }: { onBack: () => void }) {
           )}
 
           {gameState === 'gameover' && (
-            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-xl p-8 text-center animate-in fade-in zoom-in">
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#135433]/95 backdrop-blur-xl p-8 text-center animate-in fade-in zoom-in">
                <div className="text-6xl mb-4">📝</div>
-               <h2 className="text-3xl font-bold text-white mb-2">QUIZ SELESAI</h2>
+               <h2 className="text-3xl font-black text-white mb-2">QUIZ SELESAI</h2>
                <div className="flex flex-col items-center gap-2 mb-10 bg-white/5 p-6 rounded-3xl border border-white/10 w-full">
-                 <span className="text-gray-500 text-xs uppercase font-bold tracking-widest">Skor Akhir</span>
-                 <span className="text-6xl font-black text-yellow-400 drop-shadow-xl">{score}</span>
+                 <span className="text-[#8ac640] text-xs uppercase font-black tracking-widest">Skor Akhir</span>
+                 <span className="text-6xl font-black text-white drop-shadow-xl">{score}</span>
                </div>
-               <button onClick={() => setGameState('menu')} className="w-full py-4 bg-white text-slate-900 font-bold rounded-2xl hover:bg-gray-200 mb-3">Main Lagi</button>
-               <button onClick={onBack} className="w-full py-4 bg-transparent border border-white/20 rounded-2xl hover:bg-white/5 text-gray-400 hover:text-white">Keluar</button>
+               <button onClick={() => setGameState('menu')} className="w-full py-4 bg-[#8ac640] text-[#135433] font-black rounded-2xl hover:bg-[#9ad354] mb-3">Main Lagi</button>
+               <button onClick={onBack} className="w-full py-4 bg-transparent border-2 border-[#8ac640]/50 rounded-2xl hover:bg-[#8ac640]/10 text-white font-bold">Keluar</button>
             </div>
           )}
       </div>
@@ -786,13 +779,13 @@ export default function GameCenterPage() {
   if (activeGame === 'quiz') return <EcoQuizGame onBack={() => setActiveGame(null)} />;
 
   return (
-    <main className="min-h-screen bg-[#F0FDF4] font-sans text-slate-800 pb-20 overflow-x-hidden selection:bg-emerald-200">
+    <main className="min-h-screen bg-[#fefaf0] font-sans text-[#135433] pb-20 overflow-x-hidden selection:bg-[#8ac640]/30">
       <Toaster position="top-center" />
       
       <div className="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none overflow-hidden">
-         <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-emerald-200/40 blur-[100px] animate-pulse"></div>
-         <div className="absolute bottom-[0%] left-[-10%] w-[500px] h-[500px] rounded-full bg-yellow-100/60 blur-[120px]"></div>
-         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
+         <div className="absolute top-[-10%] right-[-5%] w-150 h-150 rounded-full bg-[#8ac640]/20 blur-[100px] animate-pulse"></div>
+         <div className="absolute bottom-[0%] left-[-10%] w-125 h-125 rounded-full bg-[#135433]/10 blur-[120px]"></div>
+         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light"></div>
       </div>
 
       <div className="mx-auto max-w-5xl px-6 py-10 relative z-10">
@@ -800,22 +793,22 @@ export default function GameCenterPage() {
         <div className="flex items-center justify-between mb-12">
             <Link 
                 href="/dashboard" 
-                className="group flex items-center gap-2 rounded-full bg-white/50 backdrop-blur-md border border-white/50 px-5 py-2.5 text-sm font-bold text-slate-600 transition-all hover:bg-white hover:text-emerald-700 hover:shadow-md"
+                className="group flex items-center gap-2 rounded-full bg-white/50 backdrop-blur-md border-[3px] border-[#8ac640]/30 px-5 py-2.5 text-sm font-bold text-[#135433] transition-all hover:bg-[#8ac640] hover:text-white hover:border-[#8ac640] hover:shadow-md"
             >
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 <span>Dashboard</span>
             </Link>
-            <div className="hidden sm:block px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider">
+            <div className="hidden sm:block px-4 py-1.5 rounded-full bg-[#135433] text-[#8ac640] text-xs font-black uppercase tracking-widest shadow-sm">
                 Arcade Zone
             </div>
         </div>
 
         <div className="text-center mb-16 space-y-4 animate-in slide-in-from-bottom-5 duration-700">
-            <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight">
-                Pilih <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">Tantanganmu</span>
+            <h1 className="text-4xl md:text-6xl font-black text-[#135433] tracking-tight">
+                Pilih <span className="text-[#8ac640]">Tantanganmu</span>
             </h1>
-            <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
-                Asah ketangkasan dan pengetahuan lingkunganmu melalui berbagai mini-game seru. Kumpulkan poin dan tukarkan dengan hadiah!
+            <p className="text-lg text-[#135433]/70 font-medium max-w-2xl mx-auto leading-relaxed">
+                Asah ketangkasan dan pengetahuan lingkunganmu melalui berbagai mini-game seru. Kumpulkan poin dan raih skor tertinggi!
             </p>
         </div>
 
@@ -824,18 +817,18 @@ export default function GameCenterPage() {
             {/* GAME 1: IJO CATCHER */}
             <div 
                 onClick={() => setActiveGame('catcher')}
-                className="group relative cursor-pointer rounded-[2.5rem] bg-white p-2 shadow-xl shadow-emerald-900/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-900/10 animate-in zoom-in duration-500"
+                className="group relative cursor-pointer rounded-4xl bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#8ac640]/20 animate-in zoom-in flex flex-col"
             >
-                <div className="absolute -top-3 -right-3 z-20">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-400 text-xl shadow-lg animate-bounce">🔥</span>
+                <div className="absolute -top-4 -right-4 z-20">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-400 text-2xl shadow-lg animate-bounce border-4 border-white">🔥</span>
                 </div>
                 
-                <div className="relative h-48 w-full overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-400 to-teal-600">
+                <div className="relative h-48 w-full overflow-hidden rounded-4xl bg-linear-to-br from-[#135433] to-[#0a311d]">
                     <div className="absolute inset-0 flex items-center justify-center text-8xl transition-transform duration-500 group-hover:scale-110">
                         ♻️
                     </div>
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100 backdrop-blur-[2px]">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-emerald-600 shadow-xl">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-500 group-hover:opacity-100 backdrop-blur-[2px]">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#8ac640] text-[#135433] shadow-xl">
                             <Play className="ml-1 w-8 h-8 fill-current" />
                         </div>
                     </div>
@@ -843,35 +836,35 @@ export default function GameCenterPage() {
 
                 <div className="p-6">
                     <div className="mb-2 flex items-center gap-2">
-                        <span className="rounded-lg bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Ketangkasan</span>
-                        <span className="rounded-lg bg-yellow-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-yellow-700 flex items-center gap-1">
+                        <span className="rounded-lg bg-[#135433]/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[#135433]">Ketangkasan</span>
+                        <span className="rounded-lg bg-yellow-100 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-yellow-700 flex items-center gap-1">
                             <Star className="w-3 h-3 fill-yellow-700" /> Popular
                         </span>
                     </div>
-                    <h3 className="mb-2 text-2xl font-black text-slate-800 group-hover:text-emerald-600 transition-colors">Ijo Catcher</h3>
-                    <p className="text-sm text-slate-500 leading-relaxed">
+                    <h3 className="mb-2 text-2xl font-black text-[#135433] group-hover:text-[#8ac640] transition-colors">Ijo Catcher</h3>
+                    <p className="text-sm text-[#135433]/70 font-semibold leading-relaxed">
                         Tangkap sampah yang jatuh sesuai target. Jangan sampai salah ambil atau nyawamu berkurang!
                     </p>
-                    <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
-                        <div className="flex items-center gap-1 text-xs font-bold text-slate-400">
+                    <div className="mt-6 flex items-center justify-between border-t-4 border-gray-100 pt-4">
+                        <div className="flex items-center gap-1 text-xs font-black text-gray-400">
                             <Timer className="w-4 h-4" /> 60 Detik
                         </div>
-                        <span className="text-sm font-bold text-emerald-600 group-hover:translate-x-1 transition-transform">Main Sekarang →</span>
+                        <span className="text-sm font-black text-[#8ac640] group-hover:translate-x-1 transition-transform">Main Sekarang →</span>
                     </div>
                 </div>
             </div>
 
-            {/* GAME 2: NEURO SNAKE (UNLOCKED) */}
+            {/* GAME 2: NEURO SNAKE */}
             <div 
                 onClick={() => setActiveGame('snake')}
-                className="group relative cursor-pointer rounded-[2.5rem] bg-white p-2 shadow-xl shadow-emerald-900/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-900/10 animate-in zoom-in duration-500 delay-100"
+                className="group relative cursor-pointer rounded-4xl bg-[#fefaf0] p-1 shadow-md border-8 border-cyan-500 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-500/20 animate-in zoom-in delay-100 flex flex-col"
             >
-                <div className="relative h-48 w-full overflow-hidden rounded-[2rem] bg-gradient-to-br from-cyan-400 to-blue-600">
+                <div className="relative h-48 w-full overflow-hidden rounded-4xl bg-linear-to-br from-cyan-600 to-blue-800">
                     <div className="absolute inset-0 flex items-center justify-center text-8xl transition-transform duration-500 group-hover:scale-110">
                         🐍
                     </div>
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100 backdrop-blur-[2px]">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-blue-600 shadow-xl">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-500 group-hover:opacity-100 backdrop-blur-[2px]">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-cyan-400 text-blue-900 shadow-xl">
                             <Play className="ml-1 w-8 h-8 fill-current" />
                         </div>
                     </div>
@@ -879,32 +872,34 @@ export default function GameCenterPage() {
 
                 <div className="p-6">
                     <div className="mb-2 flex items-center gap-2">
-                        <span className="rounded-lg bg-blue-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700">Logika</span>
+                        <span className="rounded-lg bg-cyan-100 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-cyan-800">
+                            <Leaf className="w-3 h-3 inline-block mr-1"/> Logika
+                        </span>
                     </div>
-                    <h3 className="mb-2 text-2xl font-black text-slate-800 group-hover:text-blue-600 transition-colors">Neuro Snake</h3>
-                    <p className="text-sm text-slate-500 leading-relaxed">
+                    <h3 className="mb-2 text-2xl font-black text-[#135433] group-hover:text-cyan-600 transition-colors">Neuro Snake</h3>
+                    <p className="text-sm text-[#135433]/70 font-semibold leading-relaxed">
                         Game klasik ular dengan twist edukasi. Makan sampah organik untuk tumbuh besar dan raih skor tertinggi!
                     </p>
-                    <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
-                        <div className="flex items-center gap-1 text-xs font-bold text-slate-400">
+                    <div className="mt-6 flex items-center justify-between border-t-4 border-gray-100 pt-4">
+                        <div className="flex items-center gap-1 text-xs font-black text-gray-400">
                             <RefreshCw className="w-4 h-4" /> Endless
                         </div>
-                        <span className="text-sm font-bold text-blue-600 group-hover:translate-x-1 transition-transform">Main Sekarang →</span>
+                        <span className="text-sm font-black text-cyan-600 group-hover:translate-x-1 transition-transform">Main Sekarang →</span>
                     </div>
                 </div>
             </div>
 
-            {/* GAME 3: ECO QUIZ (UNLOCKED) */}
+            {/* GAME 3: ECO QUIZ */}
             <div 
                 onClick={() => setActiveGame('quiz')}
-                className="group relative cursor-pointer rounded-[2.5rem] bg-white p-2 shadow-xl shadow-emerald-900/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-900/10 animate-in zoom-in duration-500 delay-200"
+                className="group relative cursor-pointer rounded-4xl bg-[#fefaf0] p-1 shadow-md border-8 border-purple-400 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-400/20 animate-in zoom-in delay-200 flex flex-col"
             >
-                <div className="relative h-48 w-full overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-400 to-purple-600">
+                <div className="relative h-48 w-full overflow-hidden rounded-4xl bg-linear-to-br from-indigo-500 to-purple-800">
                     <div className="absolute inset-0 flex items-center justify-center text-8xl transition-transform duration-500 group-hover:scale-110">
                         🧠
                     </div>
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100 backdrop-blur-[2px]">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-indigo-600 shadow-xl">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-500 group-hover:opacity-100 backdrop-blur-[2px]">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-400 text-purple-900 shadow-xl">
                             <Play className="ml-1 w-8 h-8 fill-current" />
                         </div>
                     </div>
@@ -912,17 +907,19 @@ export default function GameCenterPage() {
 
                 <div className="p-6">
                     <div className="mb-2 flex items-center gap-2">
-                        <span className="rounded-lg bg-indigo-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-700">Wawasan</span>
+                        <span className="rounded-lg bg-purple-100 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-purple-800">
+                            <Brain className="w-3 h-3 inline-block mr-1"/> Wawasan
+                        </span>
                     </div>
-                    <h3 className="mb-2 text-2xl font-black text-slate-800 group-hover:text-indigo-600 transition-colors">Eco Quiz</h3>
-                    <p className="text-sm text-slate-500 leading-relaxed">
+                    <h3 className="mb-2 text-2xl font-black text-[#135433] group-hover:text-purple-600 transition-colors">Eco Quiz</h3>
+                    <p className="text-sm text-[#135433]/70 font-semibold leading-relaxed">
                         Uji pengetahuanmu seputar lingkungan. Jawab cepat dan tepat sebelum waktu habis!
                     </p>
-                    <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
-                        <div className="flex items-center gap-1 text-xs font-bold text-slate-400">
+                    <div className="mt-6 flex items-center justify-between border-t-4 border-gray-100 pt-4">
+                        <div className="flex items-center gap-1 text-xs font-black text-gray-400">
                             <Timer className="w-4 h-4" /> 60 Detik
                         </div>
-                        <span className="text-sm font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">Main Sekarang →</span>
+                        <span className="text-sm font-black text-purple-600 group-hover:translate-x-1 transition-transform">Main Sekarang →</span>
                     </div>
                 </div>
             </div>

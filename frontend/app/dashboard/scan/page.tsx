@@ -6,7 +6,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import api from '@/lib/axios';
 import Link from 'next/link';
 import * as tmImage from '@teachablemachine/image';
-import { ArrowLeft, Loader2, Zap, Scan, Aperture, RefreshCw, XCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Zap, Scan, RefreshCw, XCircle, Leaf, AlertCircle } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -16,9 +16,9 @@ function cn(...inputs: ClassValue[]) {
 
 // --- KONFIGURASI AI ---
 const MODEL_URL = 'https://teachablemachine.withgoogle.com/models/mF1G2Xwy_2/';
-const CONFIDENCE_THRESHOLD = 0.85; // Ambang batas untuk Auto-Scan
-const STABILITY_FRAMES = 30; 
-const UI_UPDATE_DELAY = 100; // UI lebih responsif
+const CONFIDENCE_THRESHOLD = 0.88; 
+const STABILITY_FRAMES = 45; 
+const UI_UPDATE_DELAY = 100;
 
 export default function ScanPage() {
   const router = useRouter();
@@ -44,9 +44,25 @@ export default function ScanPage() {
   const lastUiUpdateRef = useRef<number>(0);
   const isSendingRef = useRef<boolean>(false);
 
-  // --- FUNGSI API (LOGIC TETAP SAMA) ---
+  // LOGIC FILTER EDUKASI 
+  const isValidTrash = (className: string) => {
+    const lower = className.toLowerCase();
+    const invalidKeywords = ['muka', 'wajah', 'face', 'background', 'kosong', 'orang', 'bukan'];
+    if (invalidKeywords.some(kw => lower.includes(kw))) return false;
+    return true; 
+  };
+
+  // --- FUNGSI API ---
   const handleLapor = useCallback(async (detectedClass: string, isManual = false) => {
     if (isSendingRef.current) return;
+    
+    if (!isValidTrash(detectedClass)) {
+        toast.error("Benda tidak valid! Harap scan sampah yang benar.", { icon: '⚠️' });
+        stabilityCounterRef.current = 0;
+        setScanProgress(0);
+        return;
+    }
+
     isSendingRef.current = true;
     setIsProcessing(true);
 
@@ -54,7 +70,7 @@ export default function ScanPage() {
       let categoryBackend = detectedClass;
       const lower = detectedClass.toLowerCase();
 
-      // Mapping Kategori
+      // Mapping Kategori Backend
       if (lower.includes('plastik') || lower.includes('plastic')) categoryBackend = 'Plastik';
       else if (lower.includes('kertas') || lower.includes('paper')) categoryBackend = 'Kertas';
       else if (lower.includes('kaleng') || lower.includes('logam')) categoryBackend = 'Logam';
@@ -65,14 +81,14 @@ export default function ScanPage() {
 
       toast.success(
         <div className="flex flex-col">
-          <span className="font-bold text-sm">{isManual ? 'Manual Scan Sukses!' : 'Objek Teridentifikasi!'}</span>
-          <span className="text-xs">Reward: +{data.reward} Koin</span>
+          <span className="font-bold text-sm text-[#135433]">{isManual ? 'Pilah Manual Sukses!' : 'Objek Teridentifikasi!'}</span>
+          <span className="text-xs text-[#135433]/80">Reward: +{data.reward} Koin</span>
         </div>,
-        { duration: 4000, icon: '🤖', style: { borderRadius: '12px', background: '#064e3b', color: '#fff' } }
+        { duration: 4000, icon: '🌿', style: { borderRadius: '16px', background: '#fefaf0', border: '2px solid #8ac640' } }
       );
 
       if (data.tickets > 0 && data.newCoinBalance === 0) {
-        setTimeout(() => toast('🎉 Selamat! Koin ditukar jadi Tiket!', { icon: '🎟️' }), 1000);
+        setTimeout(() => toast('🎉 Selamat! Koinmu ditukar jadi Tiket Emas!', { icon: '🎟️' }), 1000);
       }
 
       router.refresh();
@@ -80,7 +96,7 @@ export default function ScanPage() {
 
     } catch (error) {
       console.error("Gagal Lapor:", error);
-      toast.error('Gagal terhubung ke server.');
+      toast.error('Koneksi terputus. Coba lagi ya pahlawan!', { icon: '📡' });
       isSendingRef.current = false;
       setIsProcessing(false);
       stabilityCounterRef.current = 0;
@@ -88,7 +104,7 @@ export default function ScanPage() {
     }
   }, [router]);
 
-  // --- INIT & LOOP (LOGIC TETAP SAMA) ---
+  // --- INIT & LOOP ---
   useEffect(() => {
     isMountedRef.current = true;
 
@@ -104,8 +120,8 @@ export default function ScanPage() {
                 const topResult = sorted[0];
                 const now = Date.now();
 
-                // Stabilizer Logic (Auto Scan)
-                if (topResult.probability > CONFIDENCE_THRESHOLD) {
+                // Stabilizer Logic
+                if (topResult.probability > CONFIDENCE_THRESHOLD && isValidTrash(topResult.className)) {
                     if (topResult.className === currentClassRef.current) {
                         stabilityCounterRef.current += 1;
                     } else {
@@ -143,7 +159,7 @@ export default function ScanPage() {
         const loadedModel = await tmImage.load(modelURL, metadataURL);
         modelRef.current = loadedModel;
 
-        const webcam = new tmImage.Webcam(400, 400, true); // Resolusi sedikit dinaikkan
+        const webcam = new tmImage.Webcam(400, 400, true);
         await webcam.setup();
         
         if (!isMountedRef.current) return; 
@@ -157,7 +173,8 @@ export default function ScanPage() {
 
         if (webcamRef.current) {
             webcamRef.current.innerHTML = ''; 
-            webcam.canvas.className = "absolute inset-0 w-full h-full object-cover filter contrast-110"; // Tambah kontras dikit
+            // Perbaikan: Menggunakan object-contain agar kamera tidak terpotong
+            webcam.canvas.className = "w-full h-full object-contain transform scale-x-[-1]";
             webcamRef.current.appendChild(webcam.canvas);
         }
 
@@ -178,108 +195,100 @@ export default function ScanPage() {
       isMountedRef.current = false;
       if (requestRef.current) window.cancelAnimationFrame(requestRef.current);
       if (webcamInstanceRef.current) {
-        try { webcamInstanceRef.current.stop(); } catch(e) {}
+        try { 
+            webcamInstanceRef.current.stop(); 
+        } catch (error) {
+            // Abaikan error jika kamera sudah berhenti
+        }
       }
     };
   }, [handleLapor]);
 
   return (
-    <main className="fixed inset-0 bg-black text-white overflow-hidden flex flex-col font-sans select-none">
+    <main className="fixed inset-0 bg-[#fefaf0] overflow-hidden flex flex-col font-sans select-none">
       <Toaster position="top-center" />
 
-      {/* --- HEADER (HUD Style) --- */}
-      <header className="absolute top-0 left-0 right-0 z-30 pt-safe-top px-6 py-4 flex justify-between items-start pointer-events-none">
-        {/* Tombol Back */}
-        <Link href="/dashboard" className="pointer-events-auto group flex items-center justify-center w-10 h-10 bg-black/40 backdrop-blur-md rounded-full border border-white/20 active:scale-95 transition-all hover:bg-emerald-500/20 hover:border-emerald-500/50">
-            <ArrowLeft size={20} className="text-white group-hover:text-emerald-400" />
+      {/* --- HEADER --- */}
+      <header className="absolute top-0 left-0 right-0 z-30 pt-safe-top px-6 py-6 flex justify-between items-start pointer-events-none">
+        <Link href="/dashboard" className="pointer-events-auto group flex items-center justify-center w-12 h-12 bg-[#fefaf0] shadow-md rounded-full border-2 border-[#8ac640] active:scale-95 transition-all hover:bg-[#8ac640]">
+            <ArrowLeft size={24} className="text-[#135433] group-hover:text-white" />
         </Link>
         
-        {/* Status AI */}
         <div className="flex flex-col items-end">
-            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
-                <div className={`w-2 h-2 rounded-full ${isCameraReady ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
-                <span className="text-[10px] font-mono font-bold tracking-widest text-emerald-100/80">
-                    AI VISION v2.0
+            <div className="flex items-center gap-2 bg-[#fefaf0] shadow-md px-4 py-2 rounded-full border-2 border-[#8ac640]">
+                <div className={`w-2.5 h-2.5 rounded-full ${isCameraReady ? 'bg-[#8ac640] animate-pulse' : 'bg-red-500'}`}></div>
+                <span className="text-xs font-black tracking-widest text-[#135433]">
+                    PILAH2 AI
                 </span>
             </div>
         </div>
       </header>
 
       {/* --- VIEWPORT KAMERA --- */}
-      <div className="relative flex-1 bg-gray-950 w-full h-full overflow-hidden">
+      {/* Perbaikan: min-h-[50vh] flex-1 bg-[#0a311d] agar gambar muat dengan baik di desktop */}
+      <div className="relative flex-1 min-h-[50vh] bg-[#0a311d] w-full rounded-b-[2.5rem] md:rounded-b-[3.5rem] overflow-hidden shadow-2xl z-10 flex items-center justify-center">
         
         {/* Loading / Error State */}
         {!isCameraReady && (
-             <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gray-950/90 text-center px-6">
+             <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-[#fefaf0] text-center px-6">
                 {errorMessage ? (
-                    <div className="bg-red-500/10 p-6 rounded-2xl border border-red-500/20">
+                    <div className="bg-red-50 p-6 rounded-3xl border-2 border-red-200">
                         <XCircle className="text-red-500 mb-4 mx-auto" size={48} />
-                        <p className="text-red-400 font-bold mb-2">Akses Ditolak</p>
-                        <p className="text-red-400/70 text-sm">{errorMessage}</p>
-                        <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-red-600 text-white rounded-full text-sm font-bold hover:bg-red-700 transition-colors flex items-center gap-2 mx-auto">
+                        <p className="text-red-700 font-bold mb-2">Akses Kamera Ditolak</p>
+                        <p className="text-red-600/70 text-sm mb-6">{errorMessage}</p>
+                        <button onClick={() => window.location.reload()} className="px-6 py-3 bg-red-500 text-white rounded-full text-sm font-bold hover:bg-red-600 transition-colors flex items-center gap-2 mx-auto">
                             <RefreshCw size={16} /> Coba Lagi
                         </button>
                     </div>
                 ) : (
                     <div className="flex flex-col items-center">
                         <div className="relative">
-                            <div className="w-16 h-16 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin"></div>
+                            <div className="w-20 h-20 rounded-full border-4 border-[#8ac640]/30 border-t-[#8ac640] animate-spin"></div>
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <Aperture size={24} className="text-emerald-500 animate-pulse" />
+                                <Leaf size={28} className="text-[#8ac640] animate-pulse" />
                             </div>
                         </div>
-                        <p className="mt-6 text-sm text-emerald-500 font-mono font-bold tracking-[0.2em] animate-pulse">INITIALIZING...</p>
+                        <p className="mt-6 text-sm text-[#135433] font-black tracking-[0.2em] animate-pulse">MENYIAPKAN AI...</p>
                     </div>
                 )}
              </div>
         )}
 
         {/* Video Feed */}
-        <div ref={webcamRef} className="absolute inset-0 w-full h-full z-0 transform scale-x-[-1]" />
+        <div ref={webcamRef} className="absolute inset-0 w-full h-full z-0 flex items-center justify-center p-4 md:p-8" />
         
-        {/* --- OVERLAYS VISUAL (HUD) --- */}
+        {/* --- OVERLAYS VISUAL --- */}
         {isCameraReady && !isProcessing && (
             <>
-                {/* Vignette Gelap di pinggir agar fokus ke tengah */}
-                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.8)_100%)] z-10" />
-                
-                {/* Grid Pattern Halus */}
-                <div className="absolute inset-0 pointer-events-none opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] z-0 mix-blend-overlay"></div>
+                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_50%,rgba(10,49,29,0.8)_100%)] z-10" />
 
                 {/* Scan Line Laser */}
-                <div className="absolute inset-x-0 h-[2px] bg-emerald-400/80 shadow-[0_0_40px_rgba(52,211,153,0.8)] z-10 animate-[scan_3s_ease-in-out_infinite]" />
+                <div className="absolute inset-x-0 h-1 bg-[#8ac640]/80 shadow-[0_0_40px_rgba(138,198,64,0.8)] z-10 animate-[scan_3s_ease-in-out_infinite]" />
 
-                {/* RETICLE (Kotak Bidik Tengah) */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border border-white/20 rounded-3xl z-10 pointer-events-none">
-                    {/* Corner Brackets */}
-                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-500 rounded-tl-xl -mt-1 -ml-1"></div>
-                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-500 rounded-tr-xl -mt-1 -mr-1"></div>
-                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-500 rounded-bl-xl -mb-1 -ml-1"></div>
-                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-500 rounded-br-xl -mb-1 -mr-1"></div>
-                    
-                    {/* Center Crosshair */}
-                    <div className="absolute top-1/2 left-1/2 w-4 h-4 -translate-x-1/2 -translate-y-1/2">
-                        <div className="absolute top-0 left-1/2 w-[1px] h-full bg-white/50 -translate-x-1/2"></div>
-                        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-white/50 -translate-y-1/2"></div>
-                    </div>
+                {/* RETICLE (Kotak Bidik Tengah) - Disesuaikan agar lebih responsif */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] max-w-[280px] aspect-square border-2 border-white/20 rounded-3xl z-10 pointer-events-none">
+                    <div className="absolute top-0 left-0 w-8 h-8 border-t-8 border-l-8 border-[#8ac640] rounded-tl-xl -mt-1 -ml-1"></div>
+                    <div className="absolute top-0 right-0 w-8 h-8 border-t-8 border-r-8 border-[#8ac640] rounded-tr-xl -mt-1 -mr-1"></div>
+                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-8 border-l-8 border-[#8ac640] rounded-bl-xl -mb-1 -ml-1"></div>
+                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-8 border-r-8 border-[#8ac640] rounded-br-xl -mb-1 -mr-1"></div>
                 </div>
 
                 {/* Progress Circle (Indikator Auto-Lock) */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                      <div className={cn("relative transition-all duration-300 ease-out", scanProgress > 5 ? 'scale-100 opacity-100' : 'scale-90 opacity-0')}>
-                        <svg className="w-72 h-72 -rotate-90 drop-shadow-[0_0_15px_rgba(16,185,129,0.6)]">
-                             <circle cx="144" cy="144" r="140" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
+                        <svg className="w-64 h-64 md:w-80 md:h-80 -rotate-90 drop-shadow-md">
+                             <circle cx="50%" cy="50%" r="48%" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/10" />
                              <circle 
-                                cx="144" cy="144" r="140" 
-                                stroke="currentColor" strokeWidth="4" fill="transparent" 
-                                className="text-emerald-400 transition-all duration-100 ease-linear"
+                                cx="50%" cy="50%" r="48%" 
+                                stroke="currentColor" strokeWidth="8" fill="transparent" 
+                                className="text-[#8ac640] transition-all duration-100 ease-linear"
                                 strokeDasharray={880} 
                                 strokeDashoffset={880 - (880 * scanProgress) / 100}
                                 strokeLinecap="round"
                              />
                         </svg>
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 bg-black/60 backdrop-blur px-3 py-1 rounded text-emerald-400 text-xs font-mono font-bold tracking-widest">
-                            LOCKING TARGET... {Math.round(scanProgress)}%
+                        <div className="absolute top-[110%] left-1/2 -translate-x-1/2 mt-2 bg-[#fefaf0] px-4 py-1.5 rounded-full text-[#135433] text-xs font-black tracking-widest shadow-md border-2 border-[#8ac640]">
+                            MENGUNCI... {Math.round(scanProgress)}%
                         </div>
                      </div>
                 </div>
@@ -288,78 +297,81 @@ export default function ScanPage() {
       </div>
 
       {/* --- FOOTER & CONTROLS --- */}
-      <div className="relative z-30 bg-gradient-to-t from-black via-black/90 to-transparent pt-10 pb-8 px-6 -mt-24">
+      <div className="relative z-20 shrink-0 bg-[#fefaf0] pt-6 pb-6 px-6 flex flex-col justify-between overflow-y-auto">
          
-         <div className="flex justify-between items-end mb-6">
-             {/* Text Indikator */}
-             <div>
-                <p className="text-xs text-emerald-400 font-mono font-bold tracking-widest mb-1">
-                    {isProcessing ? "ANALYZING DATA..." : "TARGET SCANNER"}
-                </p>
-                <h2 className={cn("text-2xl font-black tracking-tight transition-colors", bestGuess ? "text-white" : "text-white/40")}>
-                    {isProcessing ? "Mohon Tunggu..." : bestGuess ? bestGuess.toUpperCase() : "Cari Objek..."}
-                </h2>
+         <div className="max-w-3xl mx-auto w-full">
+             <div className="flex justify-between items-end mb-4">
+                 <div>
+                    <p className="text-xs text-[#8ac640] font-black uppercase tracking-widest mb-1">
+                        {isProcessing ? "MENGANALISA DATA..." : "STATUS DETEKSI"}
+                    </p>
+                    <h2 className={cn("text-2xl md:text-3xl font-black tracking-tight transition-colors", bestGuess ? "text-[#135433]" : "text-[#135433]/40")}>
+                        {isProcessing ? "Tunggu..." : bestGuess ? bestGuess.toUpperCase() : "Arahkan Kamera"}
+                    </h2>
+                 </div>
+                 <div className={cn("w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center border-4 transition-all shrink-0 ml-4", 
+                    bestGuess ? "bg-[#8ac640] border-[#8ac640] text-[#135433] shadow-lg" : "bg-white border-gray-200 text-gray-400")}>
+                     {isProcessing ? <Loader2 className="animate-spin w-6 h-6 md:w-7 md:h-7" /> : <Scan className="w-6 h-6 md:w-7 md:h-7" />}
+                 </div>
              </div>
-             
-             {/* Icon Status */}
-             <div className={cn("w-12 h-12 rounded-full flex items-center justify-center border transition-all", 
-                bestGuess ? "bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]" : "bg-white/5 border-white/10 text-white/20")}>
-                 {isProcessing ? <Loader2 className="animate-spin" /> : <Scan />}
-             </div>
-         </div>
 
-         {/* Bar Probabilitas (Desain Baru) */}
-         <div className="space-y-3 mb-6 bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10">
-            {predictions.length > 0 ? predictions.map((pred, i) => (
-                <div key={i} className="flex items-center gap-3">
-                    <span className={cn("w-20 text-xs font-bold truncate text-right", pred.className === bestGuess ? 'text-emerald-300' : 'text-gray-500')}>
-                        {pred.className}
-                    </span>
-                    <div className="flex-1 h-1.5 bg-gray-700/50 rounded-full overflow-hidden">
-                        <div 
-                            className={cn("h-full rounded-full transition-all duration-300 relative", 
-                                pred.className === bestGuess ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' : 'bg-gray-600')}
-                            style={{ width: `${pred.probability * 100}%` }}
-                        >
-                            {pred.className === bestGuess && <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/50 blur-[2px]"></div>}
+             {/* Bar Probabilitas */}
+             <div className="space-y-2 mb-4 bg-white p-4 rounded-3xl border-2 border-gray-100 shadow-sm">
+                {predictions.length > 0 ? predictions.map((pred, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                        <span className={cn("w-24 text-xs font-bold truncate text-right", pred.className === bestGuess ? 'text-[#135433]' : 'text-gray-400')}>
+                            {pred.className}
+                        </span>
+                        <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div 
+                                className={cn("h-full rounded-full transition-all duration-300", 
+                                    pred.className === bestGuess ? 'bg-linear-to-r from-[#8ac640] to-emerald-400' : 'bg-gray-300')}
+                                style={{ width: `${pred.probability * 100}%` }}
+                            />
                         </div>
+                        <span className="w-10 text-xs font-black text-gray-500">{Math.round(pred.probability*100)}%</span>
                     </div>
-                    <span className="w-8 text-xs font-mono text-gray-400">{Math.round(pred.probability*100)}%</span>
-                </div>
-            )) : (
-                <div className="text-center py-2 text-xs text-gray-500 italic">Arahkan kamera ke sampah...</div>
-            )}
+                )) : (
+                    <div className="text-center py-2 text-xs text-gray-400 font-medium">Belum ada sampah terdeteksi...</div>
+                )}
+             </div>
+
+             {/* Pesan Edukasi */}
+             <div className="flex items-start gap-2 mb-4 px-2">
+                <AlertCircle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                <p className="text-[11px] md:text-xs text-gray-500 font-medium leading-tight">
+                    <strong className="text-[#135433]">Edukasi:</strong> Pastikan hanya menscan sampah asli. Wajah atau benda asing tidak akan mendapatkan tiket permainan.
+                </p>
+             </div>
+
+             {/* Tombol Manual Action */}
+             <button 
+                onClick={() => bestGuess && handleLapor(bestGuess, true)}
+                disabled={!bestGuess || isProcessing}
+                className={cn(
+                    "w-full py-4 md:py-5 rounded-[2rem] font-black text-base md:text-lg tracking-wide flex items-center justify-center gap-3 transition-all duration-300 border-b-4",
+                    bestGuess && !isProcessing 
+                        ? "bg-[#135433] hover:bg-[#0a311d] text-[#8ac640] border-[#0a311d] shadow-xl active:translate-y-1 active:border-b-0" 
+                        : "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+                )}
+             >
+                {isProcessing ? (
+                    <>
+                        <Loader2 className="animate-spin w-5 h-5 md:w-6 md:h-6" /> 
+                        <span>MENGIRIM DATA...</span>
+                    </>
+                ) : bestGuess ? (
+                    <>
+                        <Zap className="w-5 h-5 md:w-6 md:h-6 fill-[#8ac640]" />
+                        <span>LAPOR: {bestGuess.toUpperCase()}</span>
+                    </>
+                ) : (
+                    <span>TUNGGU DETEKSI AI...</span>
+                )}
+             </button>
          </div>
-
-         {/* Tombol Manual Action */}
-         <button 
-            onClick={() => bestGuess && handleLapor(bestGuess, true)}
-            disabled={!bestGuess || isProcessing}
-            className={cn(
-                "w-full py-4 rounded-2xl font-black tracking-wide flex items-center justify-center gap-3 transition-all duration-300 border",
-                bestGuess && !isProcessing 
-                    ? "bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.4)] scale-100" 
-                    : "bg-gray-900/50 text-gray-600 border-gray-800 cursor-not-allowed scale-95"
-            )}
-         >
-            {isProcessing ? (
-                <>
-                    <Loader2 className="animate-spin w-5 h-5" /> 
-                    <span>MENGIRIM DATA...</span>
-                </>
-            ) : bestGuess ? (
-                <>
-                    <Zap className="w-5 h-5 fill-white" />
-                    <span>LAPOR: {bestGuess.toUpperCase()}</span>
-                </>
-            ) : (
-                <span className="opacity-50">TUNGGU DETEKSI...</span>
-            )}
-         </button>
-
       </div>
       
-      {/* CSS Animasi Custom */}
       <style jsx global>{`
         @keyframes scan {
             0% { top: 0%; opacity: 0; }

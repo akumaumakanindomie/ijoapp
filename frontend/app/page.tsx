@@ -6,7 +6,7 @@ import api from '@/lib/axios';
 // 👇 PERBAIKAN IMPORT DI SINI (Menambahkan /app/)
 import TipsCard from '@/app/components/landing/TipsCard'; 
 
-import { Trash2, PackageOpen, Droplets, Mail, MapPin, Instagram, ArrowRight, Lock, BarChart3, Leaf } from 'lucide-react';
+import { Mail, MapPin, Instagram, ArrowRight, Lock, BarChart3, Leaf } from 'lucide-react';
 import { getDriveImage } from '@/app/utils/driveHelper';
 
 // --- Interface Data ---
@@ -52,10 +52,10 @@ export default function LandingPage() {
 
   if (loading || !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex min-h-screen items-center justify-center bg-[#fefaf0]">
         <div className="relative">
-           <div className="h-16 w-16 animate-spin rounded-full border-4 border-emerald-100 border-t-emerald-600"></div>
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl animate-pulse">🌱</div>
+           <div className="h-20 w-20 animate-spin rounded-full border-4 border-[#8ac640]/30 border-t-[#8ac640]"></div>
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-3xl animate-pulse">🌱</div>
         </div>
       </div>
     );
@@ -65,9 +65,9 @@ export default function LandingPage() {
   const navbarLogo = data.auth_section?.logo_emoji || '🌱';
 
   return (
-    <div className="min-h-screen font-sans text-emerald-950 bg-white selection:bg-emerald-200 selection:text-emerald-900">
+    <div className="min-h-screen font-sans text-[#135433] bg-[#fefaf0] selection:bg-[#8ac640]/40 selection:text-[#135433]">
       
-      {/* CUSTOM ANIMATION STYLE */}
+      {/* CUSTOM ANIMATION & STYLE */}
       <style jsx global>{`
         @keyframes float {
           0% { transform: translateY(0px); }
@@ -78,16 +78,16 @@ export default function LandingPage() {
           animation: float 6s ease-in-out infinite;
         }
         .bg-grid-pattern {
-          background-image: radial-gradient(#10b981 0.5px, transparent 0.5px);
-          background-size: 24px 24px;
+          background-image: radial-gradient(#8ac640 1px, transparent 1px);
+          background-size: 32px 32px;
         }
       `}</style>
 
       {/* --- NAVBAR --- */}
-      <nav className="fixed top-0 z-50 w-full border-b border-emerald-100 bg-white/80 backdrop-blur-xl transition-all">
+      <nav className="fixed top-0 z-50 w-full border-b border-[#8ac640]/20 bg-[#fefaf0]/80 backdrop-blur-xl transition-all shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform overflow-hidden">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-[#8ac640] to-emerald-500 text-[#135433] shadow-lg shadow-[#8ac640]/30 group-hover:scale-110 transition-transform overflow-hidden border-2 border-white">
                 {(navbarLogo.includes('http') || navbarLogo.includes('/')) ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img 
@@ -100,24 +100,24 @@ export default function LandingPage() {
                     <span className="text-2xl">{navbarLogo}</span>
                 )}
             </div>
-            <span className="text-xl font-black tracking-tighter text-emerald-950 group-hover:text-emerald-600 transition-colors">
+            <span className="text-xl font-black tracking-tighter text-[#135433] group-hover:text-[#8ac640] transition-colors">
                 IJO PROJECT
             </span>
           </div>
 
-          <div className="hidden md:flex items-center gap-8 text-sm font-bold text-emerald-800/80">
+          <div className="hidden md:flex items-center gap-8 text-sm font-black text-[#135433]/70">
              {['Beranda', 'Tips', 'Tentang'].map((item) => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="relative hover:text-emerald-600 transition-colors">
+                <a key={item} href={`#${item.toLowerCase()}`} className="relative hover:text-[#8ac640] transition-colors">
                     {item}
                 </a>
              ))}
           </div>
 
           <div className="flex gap-3">
-            <Link href="/login" className="rounded-full px-6 py-2.5 text-sm font-bold text-emerald-900 hover:bg-emerald-50 transition-colors border border-transparent hover:border-emerald-200">
+            <Link href="/login" className="rounded-full px-6 py-2.5 text-sm font-black text-[#135433] hover:bg-[#8ac640]/10 transition-colors border-2 border-transparent hover:border-[#8ac640]">
               Masuk
             </Link>
-            <Link href="/register" className="rounded-full bg-emerald-950 px-6 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-emerald-800 hover:shadow-emerald-900/20 transition-all hover:-translate-y-0.5">
+            <Link href="/register" className="rounded-full bg-[#135433] px-6 py-2.5 text-sm font-black text-[#8ac640] shadow-lg hover:bg-[#0a311d] hover:shadow-[#135433]/20 transition-all hover:-translate-y-0.5">
               Daftar Gratis
             </Link>
           </div>
@@ -125,56 +125,44 @@ export default function LandingPage() {
       </nav>
 
       {/* --- HERO SECTION --- */}
-      <section id="beranda" className="relative pt-36 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-white">
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none"></div>
-        <div className="absolute top-0 right-0 h-[600px] w-[600px] bg-emerald-100/40 rounded-full blur-[100px] -z-10 translate-x-1/3 -translate-y-1/4"></div>
-        <div className="absolute bottom-0 left-0 h-[500px] w-[500px] bg-teal-100/40 rounded-full blur-[100px] -z-10 -translate-x-1/3 translate-y-1/4"></div>
+      <section id="beranda" className="relative pt-36 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-[#fefaf0]">
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.15] pointer-events-none"></div>
+        <div className="absolute top-0 right-0 h-150 w-150 bg-[#8ac640]/20 rounded-full blur-[100px] -z-10 translate-x-1/3 -translate-y-1/4"></div>
+        <div className="absolute bottom-0 left-0 h-125 w-125 bg-emerald-300/10 rounded-full blur-[100px] -z-10 -translate-x-1/3 translate-y-1/4"></div>
 
         <div className="mx-auto max-w-7xl px-6 grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-8 relative z-10">
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-4 py-1.5 text-xs font-bold text-emerald-800 uppercase tracking-wider shadow-sm">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#8ac640]/20 border-2 border-[#8ac640]/50 px-4 py-1.5 text-xs font-black text-[#135433] uppercase tracking-wider shadow-sm">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8ac640] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#135433]"></span>
               </span>
               Platform Lingkungan #1
             </div>
             
-            <h1 className="text-5xl lg:text-7xl font-black text-emerald-950 leading-[1.1] tracking-tight">
+            <h1 className="text-5xl lg:text-7xl font-black text-[#135433] leading-[1.1] tracking-tight">
               {data.hero_section.title.split(' ').slice(0, -1).join(' ')} 
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500"> {data.hero_section.title.split(' ').pop()}</span>
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#8ac640] to-emerald-500"> {data.hero_section.title.split(' ').pop()}</span>
             </h1>
             
-            <p className="text-xl text-emerald-800/90 font-medium leading-relaxed max-w-lg">
+            <p className="text-xl text-[#135433]/80 font-semibold leading-relaxed max-w-lg">
               {data.hero_section.subtitle}
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Link href="/register" className="group relative flex items-center justify-center gap-3 overflow-hidden rounded-full bg-emerald-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-emerald-500/30 transition-transform hover:scale-[1.02] active:scale-95">
+              <Link href="/register" className="group relative flex items-center justify-center gap-3 overflow-hidden rounded-full bg-[#8ac640] px-8 py-4 text-base font-black text-[#135433] shadow-xl shadow-[#8ac640]/30 transition-transform hover:scale-[1.02] active:scale-95 border-2 border-[#8ac640] hover:bg-[#9ad354]">
                  <span>{data.hero_section.cta_text}</span>
-                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-white/0 via-white/20 to-white/0 skew-x-12 group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform stroke-3" />
+                 <div className="absolute inset-0 -translate-x-full bg-linear-to-r from-white/0 via-white/40 to-white/0 skew-x-12 group-hover:animate-[shimmer_1.5s_infinite]"></div>
               </Link>
-              <Link href="/login" className="flex items-center justify-center gap-2 rounded-full border-2 border-emerald-100 bg-white px-8 py-4 text-base font-bold text-emerald-900 shadow-sm hover:border-emerald-500 hover:text-emerald-700 transition-all">
-                 <Lock className="w-4 h-4" /> Masuk Akun
+              <Link href="/login" className="flex items-center justify-center gap-2 rounded-full border-4 border-[#135433] bg-[#fefaf0] px-8 py-4 text-base font-black text-[#135433] shadow-sm hover:bg-[#135433] hover:text-[#8ac640] transition-all">
+                 <Lock className="w-5 h-5" /> Masuk Akun
               </Link>
-            </div>
-
-            <div className="pt-8 flex items-center gap-4 text-sm font-medium text-emerald-800">
-                <div className="flex -space-x-3">
-                    {[1,2,3,4].map(i => (
-                        <div key={i} className="h-10 w-10 rounded-full border-2 border-white bg-emerald-200 overflow-hidden">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" />
-                        </div>
-                    ))}
-                </div>
-                <p>Bergabung dengan <span className="font-bold text-emerald-950">500+ Siswa</span> lainnya.</p>
             </div>
           </div>
           
           <div className="relative animate-float">
-             <div className="relative rounded-[3rem] p-3 bg-white/60 backdrop-blur-md border border-white/50 shadow-2xl shadow-emerald-900/5">
+             <div className="relative rounded-[3rem] p-3 bg-white border-4 border-[#8ac640] shadow-2xl shadow-[#135433]/10">
                 <div className="relative rounded-[2.5rem] overflow-hidden shadow-inner aspect-[4/3] bg-emerald-50">
                    {/* eslint-disable-next-line @next/next/no-img-element */}
                    <img 
@@ -184,20 +172,20 @@ export default function LandingPage() {
                      referrerPolicy="no-referrer"
                    />
                    
-                   <div className="absolute bottom-6 left-6 right-6 rounded-3xl bg-white/95 backdrop-blur-xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20">
+                   <div className="absolute bottom-6 left-6 right-6 rounded-3xl bg-[#fefaf0]/95 backdrop-blur-xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-2 border-[#8ac640]">
                       <div className="flex items-center justify-between">
                          <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-inner">
+                            <div className="h-12 w-12 rounded-2xl bg-[#135433] text-[#8ac640] flex items-center justify-center shadow-inner border-2 border-[#8ac640]">
                                <Leaf className="w-6 h-6 fill-current" />
                             </div>
                             <div>
-                               <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Impact Tracker</p>
-                               <p className="text-xl font-black text-emerald-950">1,240 kg</p>
+                               <p className="text-[10px] font-black text-[#135433]/50 uppercase tracking-widest">Impact Tracker</p>
+                               <p className="text-xl font-black text-[#135433]">1,240 kg</p>
                             </div>
                          </div>
                          <div className="text-right">
-                             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold">
-                               <BarChart3 className="w-3 h-3" /> 12%
+                             <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#8ac640]/20 text-[#135433] border border-[#8ac640]/50 text-xs font-black shadow-sm">
+                               <BarChart3 className="w-4 h-4" /> 12%
                              </span>
                          </div>
                       </div>
@@ -209,12 +197,13 @@ export default function LandingPage() {
       </section>
 
       {/* --- TIPS SECTION --- */}
-      <section id="tips" className="py-24 bg-white relative">
-         <div className="mx-auto max-w-7xl px-6">
+      <section id="tips" className="py-24 bg-white relative border-y border-[#8ac640]/20">
+         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-soft-light pointer-events-none"></div>
+         <div className="mx-auto max-w-7xl px-6 relative z-10">
             <div className="text-center mb-20 max-w-2xl mx-auto">
-               <span className="text-emerald-600 font-bold tracking-widest uppercase text-xs mb-2 block">Edukasi & Literasi</span>
-               <h2 className="text-4xl lg:text-5xl font-black text-emerald-950 mb-6">Tips & Trik Hijau 💡</h2>
-               <p className="text-lg text-emerald-800">Langkah kecil yang bisa kamu lakukan hari ini untuk dampak besar.</p>
+               <span className="text-[#8ac640] bg-[#135433] px-4 py-1.5 rounded-full font-black tracking-widest uppercase text-xs mb-4 inline-block shadow-md">Edukasi & Literasi</span>
+               <h2 className="text-4xl lg:text-5xl font-black text-[#135433] mb-6">Tips & Trik Hijau 💡</h2>
+               <p className="text-lg text-[#135433]/70 font-medium">Langkah kecil yang bisa kamu lakukan hari ini untuk dampak besar.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -228,7 +217,7 @@ export default function LandingPage() {
                     />
                   ))
                ) : (
-                  <div className="col-span-3 text-center py-10 bg-emerald-50 rounded-3xl border border-emerald-100 text-emerald-600">
+                  <div className="col-span-3 text-center py-10 bg-[#fefaf0] rounded-3xl border-4 border-[#8ac640]/30 text-[#135433] font-bold">
                     Belum ada tips yang ditambahkan di CMS.
                   </div>
                )}
@@ -237,25 +226,25 @@ export default function LandingPage() {
       </section>
 
       {/* --- CTA BANNER --- */}
-      <section className="py-24 px-6 bg-white">
-         <div className="mx-auto max-w-6xl rounded-[3.5rem] bg-emerald-950 p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl shadow-emerald-900/20">
-            <div className="absolute top-0 left-0 w-full h-full opacity-30">
-                <div className="absolute top-10 left-10 h-64 w-64 bg-emerald-500 rounded-full blur-[100px]"></div>
-                <div className="absolute bottom-10 right-10 h-64 w-64 bg-teal-500 rounded-full blur-[100px]"></div>
+      <section className="py-24 px-6 bg-[#fefaf0]">
+         <div className="mx-auto max-w-6xl rounded-[3.5rem] bg-[#135433] p-12 md:p-20 text-center text-[#fefaf0] relative overflow-hidden shadow-2xl border-8 border-[#8ac640]">
+            <div className="absolute top-0 left-0 w-full h-full opacity-40 pointer-events-none">
+                <div className="absolute top-10 left-10 h-64 w-64 bg-[#8ac640] rounded-full blur-[100px]"></div>
+                <div className="absolute bottom-10 right-10 h-64 w-64 bg-emerald-400 rounded-full blur-[100px]"></div>
             </div>
             
             <div className="relative z-10 max-w-3xl mx-auto space-y-8">
-               <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
+               <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-tight drop-shadow-md">
                   Siap Menjadi Pahlawan Lingkungan?
                </h2>
-               <p className="text-emerald-100 text-xl font-medium">
+               <p className="text-[#8ac640] text-xl font-bold">
                   Kumpulkan poin, tukarkan tiket, dan mainkan gamenya.
                </p>
                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                   <Link href="/register" className="w-full sm:w-auto rounded-full bg-emerald-500 px-10 py-5 text-lg font-bold text-white shadow-lg shadow-emerald-500/40 transition-all hover:bg-emerald-400 hover:scale-105">
+                   <Link href="/register" className="w-full sm:w-auto rounded-full bg-[#8ac640] border-2 border-[#8ac640] px-10 py-5 text-lg font-black text-[#135433] shadow-xl hover:bg-[#9ad354] hover:scale-105 transition-all">
                       Gabung Sekarang
                    </Link>
-                   <Link href="/login" className="w-full sm:w-auto rounded-full bg-white/10 backdrop-blur-md border border-white/10 px-10 py-5 text-lg font-bold text-white transition-all hover:bg-white/20">
+                   <Link href="/login" className="w-full sm:w-auto rounded-full bg-transparent border-4 border-[#8ac640] px-10 py-4 text-lg font-black text-[#8ac640] transition-all hover:bg-[#8ac640]/10">
                       Lihat Demo
                    </Link>
                </div>
@@ -264,11 +253,11 @@ export default function LandingPage() {
       </section>
 
       {/* --- FOOTER --- */}
-      <footer id="tentang" className="bg-white border-t border-emerald-100 pt-20 pb-10">
+      <footer id="tentang" className="bg-white border-t-8 border-[#8ac640] pt-20 pb-10">
          <div className="mx-auto max-w-7xl px-6 grid md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-2 space-y-6">
                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center text-xl overflow-hidden">
+                  <div className="h-12 w-12 rounded-xl bg-[#135433] border-2 border-[#8ac640] flex items-center justify-center text-xl overflow-hidden shadow-sm">
                       {(navbarLogo.includes('http') || navbarLogo.includes('/')) ? (
                            /* eslint-disable-next-line @next/next/no-img-element */
                            <img src={getDriveImage(navbarLogo)} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -276,14 +265,14 @@ export default function LandingPage() {
                            <span>{navbarLogo}</span>
                         )}
                   </div>
-                  <span className="text-2xl font-black text-emerald-950 tracking-tight">IJO PROJECT</span>
+                  <span className="text-2xl font-black text-[#135433] tracking-tight">IJO PROJECT</span>
                </div>
-               <p className="text-emerald-800 leading-relaxed max-w-sm text-lg">
+               <p className="text-[#135433]/70 font-semibold leading-relaxed max-w-sm text-lg">
                   {data.footer_info.about}
                </p>
                <div className="flex gap-4">
                    {['twitter', 'facebook', 'instagram'].map((social) => (
-                       <div key={social} className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition-colors cursor-pointer">
+                       <div key={social} className="h-10 w-10 rounded-full bg-[#fefaf0] border-2 border-[#8ac640]/50 flex items-center justify-center text-[#135433] hover:bg-[#8ac640] hover:text-[#135433] hover:border-[#8ac640] transition-all cursor-pointer shadow-sm hover:-translate-y-1">
                            <span className="sr-only">{social}</span>
                            <div className="w-4 h-4 bg-current rounded-sm"></div>
                        </div>
@@ -292,37 +281,37 @@ export default function LandingPage() {
             </div>
             
             <div>
-               <h4 className="font-bold text-emerald-950 text-lg mb-6">Hubungi Kami</h4>
-               <ul className="space-y-4 text-emerald-800">
-                  <li className="flex items-center gap-3 hover:text-emerald-600 transition-colors">
-                      <Mail className="w-5 h-5 text-emerald-500" /> {data.footer_info.contact}
+               <h4 className="font-black text-[#135433] text-lg mb-6">Hubungi Kami</h4>
+               <ul className="space-y-4 text-[#135433]/80 font-bold">
+                  <li className="flex items-center gap-3 hover:text-[#8ac640] transition-colors cursor-pointer">
+                      <Mail className="w-5 h-5 text-[#8ac640]" /> {data.footer_info.contact}
                   </li>
-                  <li className="flex items-center gap-3 hover:text-emerald-600 transition-colors">
-                      <MapPin className="w-5 h-5 text-emerald-500" /> {data.footer_info.address}
+                  <li className="flex items-center gap-3 hover:text-[#8ac640] transition-colors cursor-pointer">
+                      <MapPin className="w-5 h-5 text-[#8ac640]" /> {data.footer_info.address}
                   </li>
-                  <li className="flex items-center gap-3 hover:text-emerald-600 transition-colors">
-                      <Instagram className="w-5 h-5 text-emerald-500" /> {data.footer_info.social_ig}
+                  <li className="flex items-center gap-3 hover:text-[#8ac640] transition-colors cursor-pointer">
+                      <Instagram className="w-5 h-5 text-[#8ac640]" /> {data.footer_info.social_ig}
                   </li>
                </ul>
             </div>
 
             <div>
-               <h4 className="font-bold text-emerald-950 text-lg mb-6">Menu</h4>
-               <ul className="space-y-3 font-medium text-emerald-800">
-                  <li><Link href="/login" className="hover:text-emerald-600 hover:translate-x-1 inline-block transition-transform">🔐 Login Siswa</Link></li>
-                  <li><Link href="/register" className="hover:text-emerald-600 hover:translate-x-1 inline-block transition-transform">🚀 Daftar Baru</Link></li>
-                  <li><Link href="/dashboard" className="hover:text-emerald-600 hover:translate-x-1 inline-block transition-transform">📊 Dashboard</Link></li>
+               <h4 className="font-black text-[#135433] text-lg mb-6">Menu</h4>
+               <ul className="space-y-3 font-bold text-[#135433]/80">
+                  <li><Link href="/login" className="hover:text-[#8ac640] hover:translate-x-1 inline-block transition-transform">🔐 Login Siswa</Link></li>
+                  <li><Link href="/register" className="hover:text-[#8ac640] hover:translate-x-1 inline-block transition-transform">🚀 Daftar Baru</Link></li>
+                  <li><Link href="/dashboard" className="hover:text-[#8ac640] hover:translate-x-1 inline-block transition-transform">📊 Dashboard</Link></li>
                </ul>
             </div>
          </div>
          
-         <div className="mx-auto max-w-7xl px-6 border-t border-emerald-100 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-emerald-700 font-medium">
+         <div className="mx-auto max-w-7xl px-6 border-t-2 border-[#8ac640]/20 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-[#135433]/60 font-black tracking-wide">
                &copy; 2026 Ijo Project. All rights reserved.
             </p>
-            <div className="flex gap-6 text-sm text-emerald-700 font-medium">
-                <a href="#" className="hover:text-emerald-500">Privacy Policy</a>
-                <a href="#" className="hover:text-emerald-500">Terms of Service</a>
+            <div className="flex gap-6 text-sm text-[#135433]/60 font-black">
+                <a href="#" className="hover:text-[#8ac640] transition-colors">Privacy Policy</a>
+                <a href="#" className="hover:text-[#8ac640] transition-colors">Terms of Service</a>
             </div>
          </div>
       </footer>

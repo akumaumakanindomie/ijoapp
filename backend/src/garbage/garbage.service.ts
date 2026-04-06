@@ -21,9 +21,9 @@ export class GarbageService {
     user.ijoCoins += rewardCoins;
 
     // Logika Bonus: Jika koin sudah banyak, tukar jadi tiket game
-    if (user.ijoCoins >= 30) {
+    if (user.ijoCoins >= 10) {
       user.gameTickets += 1;
-      user.ijoCoins -= 30; // Potong koin, ganti tiket
+      user.ijoCoins -= 10; // Potong koin, ganti tiket
     }
 
     await user.save();
