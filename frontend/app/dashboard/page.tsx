@@ -1,24 +1,17 @@
 'use client';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
+import Image from 'next/image';
 import api from '@/lib/axios';
 import toast, { Toaster } from 'react-hot-toast';
-import { 
-  LogOut, 
-  Trophy, 
-  Gamepad2, 
-  ChevronRight, 
-  Sparkles,
-  Leaf,
-  Recycle,
-  ArrowRight,
-  Quote
+import {
+  LogOut, Trophy, Gamepad2, ChevronRight, 
+  Sparkles, Leaf, Recycle, ArrowRight, 
+  Quote, Target, CheckCircle2
 } from 'lucide-react';
 
-// --- TIPE DATA ---
 interface ItemData {
   _id: string;
   name: string;
@@ -44,7 +37,6 @@ interface ApiError {
   };
 }
 
-// --- LOADING SKELETON ---
 const DashboardSkeleton = () => (
   <div className="mx-auto max-w-6xl px-6 py-8 space-y-8 animate-pulse relative z-10">
     <div className="flex justify-between items-center">
@@ -72,27 +64,23 @@ export default function DashboardPage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [greeting, setGreeting] = useState('Halo');
-  
-  // Modal State
   const [showSelectModal, setShowSelectModal] = useState(false);
   const [selectLoading, setSelectLoading] = useState(false);
+  const [questClaimed, setQuestClaimed] = useState(false);
 
-  // 1. Logic Sapaan Waktu
   useEffect(() => {
     const hours = new Date().getHours();
-    if (hours < 11) setGreeting('Selamat Pagi ☀️');
-    else if (hours < 15) setGreeting('Selamat Siang 🌤️');
-    else if (hours < 18) setGreeting('Selamat Sore 🌆');
+    if (hours < 11) setGreeting('Selamat Pagi 🌅');
+    else if (hours < 15) setGreeting('Selamat Siang ☀️');
+    else if (hours < 18) setGreeting('Selamat Sore ⛅');
     else setGreeting('Selamat Malam 🌙');
   }, []);
 
-  // 2. Fetch Data Profil
   const fetchUserProfile = useCallback(async () => {
     try {
       const response = await api.get('/auth/profile');
       setUser(response.data);
-    } catch (error) {
-      console.error("Gagal ambil data profile:", error);
+    } catch {
       Cookies.remove('token');
       router.push('/login');
     } finally {
@@ -109,7 +97,6 @@ export default function DashboardPage() {
     fetchUserProfile();
   }, [fetchUserProfile, router]);
 
-  // Cek Absen Harian
   const hasCheckedInToday = () => {
     if (!user?.activeItem?.lastCheckIn) return false;
     const lastDate = new Date(user.activeItem.lastCheckIn);
@@ -121,25 +108,25 @@ export default function DashboardPage() {
     );
   };
 
-  // 3. FUNGSI CHECK-IN
   const handleCheckIn = async () => {
     if (!user?.activeItem) return;
     if (hasCheckedInToday()) {
-        toast('Sudah rawat hari ini. Besok lagi ya! 🕒', { icon: '📅' });
+        toast('Sudah rawat hari ini. Besok lagi ya! 🌟', { icon: '👏' });
         return;
     }
+
     setCheckInLoading(true);
     try {
       const response = await api.post('/items/checkin');
       const { gainedXp, levelUp } = response.data;
       
       if (levelUp) {
-        toast.success(`LEVEL UP! ${user.activeItem.name} naik level! 🎉`, { 
-            duration: 5000,
-            icon: '🆙'
+        toast.success(`LEVEL UP! ${user.activeItem.name} naik level! 🎉`, {
+             duration: 5000,
+            icon: '🚀'
         });
       } else {
-        toast.success(`+${gainedXp} XP! Partner makin setia. 💖`);
+        toast.success(`+${gainedXp} XP! Partner makin setia. 💚`);
       }
       fetchUserProfile();
     } catch (error) {
@@ -151,28 +138,35 @@ export default function DashboardPage() {
     }
   };
 
-  // 4. FUNGSI PILIH PARTNER
   const handleSelectItem = async (selection: 'Tumbler' | 'ToteBag') => {
     setSelectLoading(true);
     try {
         const isTumbler = selection === 'Tumbler';
         const payload = {
             name: isTumbler ? 'Si Botol Sakti' : 'Tas Ajaib',
-            type: isTumbler ? 'Tumbler' : 'Tote Bag', 
-            personality: isTumbler ? 'Ceria & Energik' : 'Ramah & Setia' 
+            type: isTumbler ? 'Tumbler' : 'Tote Bag',
+            personality: isTumbler ? 'Ceria & Energik' : 'Ramah & Setia'
         };
-
         await api.post('/items/choose', payload);
         toast.success(`Selamat! Kamu memilih ${payload.name}`);
         setShowSelectModal(false);
-        fetchUserProfile(); 
+        fetchUserProfile();
     } catch (error) {
         const err = error as ApiError;
         const msg = err.response?.data?.message || 'Gagal memilih item';
-        toast.error(Array.isArray(msg) ? msg[0] : msg); 
+        toast.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
         setSelectLoading(false);
     }
+  };
+
+  const handleClaimQuest = () => {
+    if (questClaimed) return;
+    setQuestClaimed(true);
+    if (user) {
+        setUser({ ...user, gameTickets: user.gameTickets + 1 });
+    }
+    toast.success('Quest Selesai! +1 Tiket Emas', { icon: '🎟️' });
   };
 
   const handleLogout = () => {
@@ -183,11 +177,10 @@ export default function DashboardPage() {
   const getItemIcon = (name: string) => {
     const lower = name.toLowerCase();
     if (lower.includes('botol') || lower.includes('tumbler')) return '🥤';
-    if (lower.includes('tas') || lower.includes('bag')) return '🎒';
-    return '🌟';
+    if (lower.includes('tas') || lower.includes('bag')) return '🛍️';
+    return '🌱';
   };
 
-  // Hitung persentase XP (Safe calculation)
   const xpPercentage = user?.activeItem 
     ? Math.min(100, (user.activeItem.currentXp / user.activeItem.nextLevelXp) * 100)
     : 0;
@@ -205,13 +198,13 @@ export default function DashboardPage() {
   }
 
   if (!user) return null;
+
   const isDoneToday = hasCheckedInToday();
 
   return (
     <main className="min-h-screen bg-[#fefaf0] pb-24 font-sans text-[#135433] selection:bg-[#8ac640]/30 relative overflow-hidden">
       <Toaster position="top-center" />
       
-      {/* Background Orbs */}
       <div className="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none">
           <div className="absolute inset-0 bg-[#fefaf0]"></div>
           <div className="absolute top-[-10%] left-[-5%] w-150 h-150 rounded-full bg-[#8ac640]/10 blur-[100px] animate-pulse"></div>
@@ -222,15 +215,18 @@ export default function DashboardPage() {
 
       <div className="mx-auto max-w-6xl px-6 py-8 space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
         
-        {/* === HEADER === */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-5">
              <div className="relative group cursor-pointer">
                 <div className="absolute inset-0 rounded-full bg-linear-to-tr from-[#8ac640] to-emerald-500 blur-md opacity-0 group-hover:opacity-60 transition-opacity duration-500"></div>
                 <div className="relative h-16 w-16 rounded-full p-0.5 bg-[#fefaf0] shadow-lg border-2 border-[#135433]">
-                    <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.fullName}&backgroundColor=fefaf0`} alt="Avatar" />
+                    <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden relative">
+                        <Image 
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.fullName}&backgroundColor=fefaf0`} 
+                            alt="Avatar" 
+                            fill
+                            unoptimized
+                        />
                     </div>
                 </div>
              </div>
@@ -250,18 +246,13 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* === SECTION 1: HERO BOARD === */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
-            
-            {/* KARTU PARTNER UTAMA */}
             <div className="md:col-span-8 relative overflow-hidden rounded-[2.5rem] bg-[#135433] text-white shadow-xl shadow-emerald-900/10 group transition-transform hover:scale-[1.01] duration-500">
                 <div className="absolute inset-0 bg-linear-to-br from-[#135433] to-[#0a311d]"></div>
                 <div className="absolute top-0 right-0 h-full w-3/4 bg-[#8ac640]/10 -skew-x-12 blur-3xl rounded-full translate-x-10"></div>
                 <div className="absolute bottom-0 left-0 h-64 w-64 bg-emerald-500/20 rounded-full blur-[80px]"></div>
 
                 <div className="relative z-10 p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-8 h-full">
-                    
-                    {/* Kiri: Info & Stats */}
                     <div className="flex-1 w-full flex flex-col justify-between h-full min-h-65">
                         <div>
                             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 backdrop-blur-md border border-[#8ac640]/30 mb-5 shadow-inner">
@@ -276,7 +267,7 @@ export default function DashboardPage() {
                             {user.activeItem ? (
                                 <p className="text-emerald-100 text-base font-medium flex items-center gap-2">
                                     <span className={`h-3 w-3 rounded-full ${isDoneToday ? 'bg-[#8ac640] shadow-[0_0_10px_#8ac640]' : 'bg-red-400 animate-pulse'}`}></span>
-                                    Mood: <span className="text-white font-bold">{isDoneToday ? "Senang & Bersih ✨" : "Butuh Perhatian! ⚠️"}</span>
+                                    Mood: <span className="text-white font-bold">{isDoneToday ? "Senang & Bersih ✨" : "Butuh Perhatian! 🥺"}</span>
                                 </p>
                             ) : (
                                 <p className="text-emerald-200 text-base font-medium">Mulai perjalananmu dengan memilih partner.</p>
@@ -300,22 +291,22 @@ export default function DashboardPage() {
                                 </div>
                                 
                                 <button 
-                                    onClick={handleCheckIn} 
-                                    disabled={checkInLoading || isDoneToday} 
+                                    onClick={handleCheckIn}
+                                    disabled={checkInLoading || isDoneToday}
                                     className={`mt-6 w-full flex items-center justify-center gap-3 rounded-2xl px-6 py-4 text-base font-bold transition-all shadow-xl active:scale-95 group/btn
                                         ${isDoneToday 
                                             ? 'bg-black/20 text-white/50 cursor-not-allowed border border-white/5' 
                                             : 'bg-[#8ac640] text-[#135433] hover:bg-[#9ad354] hover:shadow-[#8ac640]/20'
                                         }`}
                                 >
-                                    {checkInLoading ? <span className="animate-spin">⏳</span> : isDoneToday ? <span>✅</span> : <span className="group-hover/btn:scale-125 transition-transform">💖</span>}
+                                    {checkInLoading ? <span className="animate-spin">⏳</span> : isDoneToday ? <span>✨</span> : <span className="group-hover/btn:scale-125 transition-transform">💧</span>}
                                     {checkInLoading ? 'Menyimpan...' : isDoneToday ? 'Selesai Hari Ini' : 'Rawat & Tambah XP'}
                                 </button>
                             </div>
                         ) : (
                             <div className="mt-8">
                                 <button 
-                                    onClick={() => setShowSelectModal(true)} 
+                                    onClick={() => setShowSelectModal(true)}
                                     className="w-full md:w-auto rounded-2xl bg-[#8ac640] px-8 py-4 text-base font-black text-[#135433] shadow-xl hover:bg-[#9ad354] hover:scale-105 transition-all animate-bounce"
                                 >
                                     + Pilih Partner Sekarang
@@ -328,22 +319,19 @@ export default function DashboardPage() {
                         <div className="absolute inset-0 bg-[#8ac640]/20 rounded-full blur-3xl transform scale-150 animate-pulse"></div>
                         <div className="relative h-48 w-48 md:h-56 md:w-56 flex items-center justify-center rounded-full bg-linear-to-b from-white/10 to-transparent border-4 border-[#8ac640]/30 shadow-2xl backdrop-blur-md animate-float hover:scale-105 transition-transform duration-500">
                             <span className="text-8xl md:text-9xl filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)] select-none transform hover:rotate-6 transition-transform cursor-pointer">
-                                {user.activeItem ? getItemIcon(user.activeItem.name) : '🌱'}
+                                {user.activeItem ? getItemIcon(user.activeItem.name) : '🎁'}
                             </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* KARTU STATISTIK */}
             <div className="md:col-span-4 flex flex-col gap-6">
-                
-                {/* Coin Card */}
                 <div className="flex-1 rounded-[2.5rem] bg-[#fefaf0] p-8 shadow-md border-[6px] border-yellow-400 hover:shadow-xl hover:-translate-y-1 transition-all group relative overflow-hidden">
                     <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-yellow-100 transition-transform group-hover:scale-150 duration-700 pointer-events-none"></div>
                     <div className="relative z-10 flex flex-col justify-between h-full gap-4">
                         <div className="flex items-center gap-4">
-                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#135433] text-yellow-300 text-3xl shadow-inner group-hover:rotate-12 transition-transform duration-300">💰</div>
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#135433] text-yellow-300 text-3xl shadow-inner group-hover:rotate-12 transition-transform duration-300">🪙</div>
                             <div>
                                 <span className="font-bold text-[#8ac640] text-xs uppercase tracking-wider block">Dompet Saya</span>
                                 <span className="font-black text-[#135433] text-lg tracking-tight">Ijo Coins</span>
@@ -355,7 +343,6 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* Ticket Card */}
                 <div className="flex-1 rounded-[2.5rem] bg-[#fefaf0] p-8 shadow-md border-[6px] border-[#8ac640] hover:shadow-xl hover:-translate-y-1 transition-all group relative overflow-hidden">
                     <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-[#8ac640]/20 transition-transform group-hover:scale-150 duration-700 pointer-events-none"></div>
                     <div className="relative z-10 flex flex-col justify-between h-full gap-4">
@@ -374,7 +361,26 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* === SECTION 2: MENU AKTIVITAS === */}
+        <div className="mt-8 bg-white rounded-3xl p-6 border-4 border-emerald-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:border-[#8ac640]">
+           <div className="flex items-center gap-4">
+               <div className="h-14 w-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+                   <Target className="w-7 h-7" />
+               </div>
+               <div>
+                   <h3 className="font-black text-[#135433] text-lg">Daily Quest</h3>
+                   <p className="text-sm font-bold text-[#135433]/60">Login atau Scan 1 Sampah hari ini untuk mendapatkan tiket!</p>
+               </div>
+           </div>
+           <button 
+               onClick={handleClaimQuest}
+               disabled={questClaimed}
+               className={`px-8 py-4 rounded-2xl font-black flex items-center gap-2 transition-all ${questClaimed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#8ac640] text-[#135433] hover:bg-[#9ad354] shadow-lg hover:-translate-y-1 active:scale-95'}`}
+           >
+               {questClaimed ? <CheckCircle2 className="w-5 h-5" /> : <Target className="w-5 h-5" />}
+               <span>{questClaimed ? 'Telah Diklaim' : 'Klaim Tiket'}</span>
+           </button>
+        </div>
+
         <div>
             <div className="flex items-center justify-between mb-8 mt-4">
                 <h2 className="text-2xl font-black text-[#135433] flex items-center gap-3">
@@ -387,8 +393,6 @@ export default function DashboardPage() {
             </div>
             
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                
-                {/* SCAN CARD */}
                 <Link href="/dashboard/scan" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#8ac640]/30 via-[#8ac640]/10 to-transparent rounded-bl-full pointer-events-none"></div>
                     <div className="relative z-10 p-8 flex flex-col h-full">
@@ -407,7 +411,6 @@ export default function DashboardPage() {
                     </div>
                 </Link>
 
-                {/* GAME CARD */}
                 <Link href="/dashboard/game" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#135433] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#135433]/30 via-[#135433]/10 to-transparent rounded-bl-full pointer-events-none"></div>
                     <div className="relative z-10 p-8 flex flex-col h-full">
@@ -426,7 +429,6 @@ export default function DashboardPage() {
                     </div>
                 </Link>
 
-                {/* LEADERBOARD CARD */}
                 <Link href="/dashboard/leaderboard" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#8ac640]/30 via-[#8ac640]/10 to-transparent rounded-bl-full pointer-events-none"></div>
                     <div className="relative z-10 p-8 flex flex-col h-full">
@@ -447,9 +449,7 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* === SECTION 3: ARTIKEL === */}
         <div className="mt-20 bg-white rounded-[3.5rem] p-8 md:p-12 shadow-xl border-8 border-[#fefaf0] flex flex-col lg:flex-row gap-12 items-center">
-            {/* Kiri: Teks & CTA */}
             <div className="flex-1 space-y-6">
                 <h2 className="text-4xl md:text-5xl font-black text-[#135433] uppercase leading-none tracking-tight">
                     Baca Artikel <br /> <span className="text-[#8ac640]">Pilihan!</span>
@@ -457,36 +457,30 @@ export default function DashboardPage() {
                 <p className="text-[#135433]/70 font-bold leading-relaxed">
                     Temukan berbagai inspirasi, wawasan baru, dan panduan praktis untuk gaya hidup ramah lingkungan. Jadilah bagian dari perubahan dengan terus belajar dan membaca kebiasaan baru yang berkelanjutan.
                 </p>
-                <Link href="/tips" className="inline-flex items-center gap-2 px-8 py-4 rounded-full border-4 border-[#135433] text-[#135433] font-black hover:bg-[#135433] hover:text-[#8ac640] transition-colors shadow-sm active:scale-95 group">
+                <Link href="/artikel" className="inline-flex items-center gap-2 px-8 py-4 rounded-full border-4 border-[#135433] text-[#135433] font-black hover:bg-[#135433] hover:text-[#8ac640] transition-colors shadow-sm active:scale-95 group">
                     Baca di Web Kami! <ArrowRight className="w-5 h-5 stroke-[3] group-hover:translate-x-1 transition-transform" />
                 </Link>
             </div>
             
-            {/* Kanan: Grid Gambar & Quote */}
             <div className="flex-1 w-full space-y-6">
-                {/* Masonry-style Images */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-3xl overflow-hidden aspect-[3/4] border-4 border-[#8ac640] shadow-md transform lg:-translate-y-4 transition-transform hover:scale-105">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=600&auto=format&fit=crop" alt="Menanam" className="w-full h-full object-cover" />
+                    <div className="rounded-3xl overflow-hidden aspect-3/4 border-4 border-[#8ac640] shadow-md transform lg:-translate-y-4 transition-transform hover:scale-105 relative">
+                        <Image src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=600&auto=format&fit=crop" alt="Menanam" fill unoptimized className="object-cover" />
                     </div>
-                    <div className="rounded-3xl overflow-hidden aspect-[3/4] border-4 border-[#135433] shadow-md transform lg:translate-y-4 transition-transform hover:scale-105">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="https://images.unsplash.com/photo-1625314563148-572c6af9e9d5?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHBlbWJlcnNpaGFuJTIwbGluZ2t1bmdhbnxlbnwwfHwwfHx8MA%3D%3D" alt="Membersihkan" className="w-full h-full object-cover" />
+                    <div className="rounded-3xl overflow-hidden aspect-3/4 border-4 border-[#135433] shadow-md transform lg:translate-y-4 transition-transform hover:scale-105 relative">
+                        <Image src="https://images.unsplash.com/photo-1625314563148-572c6af9e9d5?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHBlbWJlcnNpaGFuJTIwbGluZ2t1bmdhbnxlbnwwfHwwfHx8MA%3D%3D" alt="Membersihkan" fill unoptimized className="object-cover" />
                     </div>
                 </div>
                 
-                {/* Quote Box */}
                 <div className="bg-[#fefaf0] border-4 border-[#8ac640]/30 rounded-3xl p-6 flex items-center gap-5 shadow-sm lg:mt-8">
-                    <div className="h-16 w-16 md:h-20 md:w-20 shrink-0 rounded-full overflow-hidden border-4 border-[#8ac640] shadow-sm">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="https://i.pravatar.cc/150?u=a042581f4e29026024d" alt="Author" className="w-full h-full object-cover"/>
+                    <div className="h-16 w-16 md:h-20 md:w-20 shrink-0 rounded-full overflow-hidden border-4 border-[#8ac640] shadow-sm relative">
+                        <Image src="https://i.pravatar.cc/150?u=a042581f4e29026024d" alt="Author" fill unoptimized className="object-cover"/>
                     </div>
                     <div className="flex-1 relative">
                         <Quote className="absolute -top-3 -left-3 w-8 h-8 text-[#8ac640]/20 rotate-180" />
                         <p className="text-[#135433] text-sm md:text-base font-bold italic relative z-10 leading-snug">
                            &quot;Perubahan besar selalu dimulai dari langkah kecil. Mari rawat bumi kita hari ini, untuk senyum generasi di masa depan.&quot; 
-                        </p>
+                         </p>
                         <div className="mt-3 leading-none">
                             <p className="font-black text-[#135433] text-sm">Bpk. Bebeck</p>
                             <p className="text-[10px] font-bold text-[#8ac640] uppercase tracking-widest mt-1">Aktivis Lingkungan</p>
@@ -496,13 +490,12 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* MODAL PILIH PARTNER */}
         {showSelectModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#135433]/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
                 <div className="w-full max-w-lg bg-[#fefaf0] rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300 border-8 border-[#8ac640] bg-clip-padding">
                     <div className="text-center mb-10">
                         <div className="h-20 w-20 bg-[#135433] text-[#8ac640] rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner border-4 border-[#8ac640]">
-                            🎁
+                            🐾                             
                         </div>
                         <h2 className="text-3xl font-black text-[#135433]">Pilih Partner Kamu</h2>
                         <p className="text-[#135433]/70 mt-2 font-medium">Pilih teman setia yang akan menemanimu menjaga bumi.</p>
@@ -518,13 +511,12 @@ export default function DashboardPage() {
                             <span className="font-black text-lg text-[#135433] group-hover:text-[#8ac640]">Si Botol Sakti</span>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-2 bg-slate-100 px-2 py-1 rounded-lg">Type: Tumbler</span>
                         </button>
-
                         <button 
                             onClick={() => handleSelectItem('ToteBag')}
                             disabled={selectLoading}
                             className="group relative flex flex-col items-center p-6 rounded-3xl border-4 border-purple-400/30 bg-white hover:border-purple-400 transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95"
                         >
-                            <div className="text-6xl mb-4 group-hover:scale-110 transition-transform filter drop-shadow-md">🎒</div>
+                            <div className="text-6xl mb-4 group-hover:scale-110 transition-transform filter drop-shadow-md">🛍️</div>
                             <span className="font-black text-lg text-[#135433] group-hover:text-purple-500">Tas Ajaib</span>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-2 bg-slate-100 px-2 py-1 rounded-lg">Type: Tote Bag</span>
                         </button>
@@ -536,7 +528,6 @@ export default function DashboardPage() {
                 </div>
             </div>
         )}
-
       </div>
     </main>
   );

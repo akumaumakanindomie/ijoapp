@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
@@ -14,16 +13,14 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// --- KONFIGURASI AI ---
 const MODEL_URL = 'https://teachablemachine.withgoogle.com/models/mF1G2Xwy_2/';
-const CONFIDENCE_THRESHOLD = 0.88; 
-const STABILITY_FRAMES = 45; 
-const UI_UPDATE_DELAY = 100;
+const CONFIDENCE_THRESHOLD = 0.90; 
+const STABILITY_COUNT = 4; 
+const THROTTLE_MS = 250; 
 
 export default function ScanPage() {
   const router = useRouter();
 
-  // STATE UI
   const [predictions, setPredictions] = useState<{ className: string; probability: number }[]>([]);
   const [bestGuess, setBestGuess] = useState<string | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
@@ -31,33 +28,29 @@ export default function ScanPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // REFS
   const webcamRef = useRef<HTMLDivElement>(null);
   const modelRef = useRef<tmImage.CustomMobileNet | null>(null);
   const webcamInstanceRef = useRef<tmImage.Webcam | null>(null);
   const requestRef = useRef<number>(0);
   const isMountedRef = useRef<boolean>(true);
-  
-  // REFS LOGIC
+
   const stabilityCounterRef = useRef<number>(0);
   const currentClassRef = useRef<string | null>(null);
-  const lastUiUpdateRef = useRef<number>(0);
+  const lastPredictTimeRef = useRef<number>(0);
   const isSendingRef = useRef<boolean>(false);
 
-  // LOGIC FILTER EDUKASI 
   const isValidTrash = (className: string) => {
     const lower = className.toLowerCase();
-    const invalidKeywords = ['muka', 'wajah', 'face', 'background', 'kosong', 'orang', 'bukan'];
+    const invalidKeywords = ['muka', 'wajah', 'face', 'background', 'kosong', 'orang', 'bukan', 'tangan'];
     if (invalidKeywords.some(kw => lower.includes(kw))) return false;
     return true; 
   };
 
-  // --- FUNGSI API ---
   const handleLapor = useCallback(async (detectedClass: string, isManual = false) => {
     if (isSendingRef.current) return;
     
     if (!isValidTrash(detectedClass)) {
-        toast.error("Benda tidak valid! Harap scan sampah yang benar.", { icon: '⚠️' });
+        toast.error("Benda tidak valid! Harap scan sampah yang benar.", { icon: '🚫' });
         stabilityCounterRef.current = 0;
         setScanProgress(0);
         return;
@@ -69,8 +62,7 @@ export default function ScanPage() {
     try {
       let categoryBackend = detectedClass;
       const lower = detectedClass.toLowerCase();
-
-      // Mapping Kategori Backend
+      
       if (lower.includes('plastik') || lower.includes('plastic')) categoryBackend = 'Plastik';
       else if (lower.includes('kertas') || lower.includes('paper')) categoryBackend = 'Kertas';
       else if (lower.includes('kaleng') || lower.includes('logam')) categoryBackend = 'Logam';
@@ -84,19 +76,17 @@ export default function ScanPage() {
           <span className="font-bold text-sm text-[#135433]">{isManual ? 'Pilah Manual Sukses!' : 'Objek Teridentifikasi!'}</span>
           <span className="text-xs text-[#135433]/80">Reward: +{data.reward} Koin</span>
         </div>,
-        { duration: 4000, icon: '🌿', style: { borderRadius: '16px', background: '#fefaf0', border: '2px solid #8ac640' } }
+        { duration: 4000, icon: '🎉', style: { borderRadius: '16px', background: '#fefaf0', border: '2px solid #8ac640' } }
       );
 
       if (data.tickets > 0 && data.newCoinBalance === 0) {
-        setTimeout(() => toast('🎉 Selamat! Koinmu ditukar jadi Tiket Emas!', { icon: '🎟️' }), 1000);
+        setTimeout(() => toast('🎟️ Selamat! Koinmu ditukar jadi Tiket Emas!', { icon: '✨' }), 1000);
       }
 
       router.refresh();
       setTimeout(() => router.push('/dashboard'), 2000);
-
     } catch (error) {
-      console.error("Gagal Lapor:", error);
-      toast.error('Koneksi terputus. Coba lagi ya pahlawan!', { icon: '📡' });
+      toast.error('Koneksi terputus. Coba lagi ya pahlawan!', { icon: '🔌' });
       isSendingRef.current = false;
       setIsProcessing(false);
       stabilityCounterRef.current = 0;
@@ -104,7 +94,6 @@ export default function ScanPage() {
     }
   }, [router]);
 
-  // --- INIT & LOOP ---
   useEffect(() => {
     isMountedRef.current = true;
 
@@ -112,41 +101,40 @@ export default function ScanPage() {
         if (!isMountedRef.current) return;
 
         if (webcamInstanceRef.current) {
-            webcamInstanceRef.current.update();
+            webcamInstanceRef.current.update(); 
             
-            if (modelRef.current && !isSendingRef.current) {
+            const now = Date.now();
+            
+            if (modelRef.current && !isSendingRef.current && (now - lastPredictTimeRef.current > THROTTLE_MS)) {
+                lastPredictTimeRef.current = now;
+
                 const prediction = await modelRef.current.predict(webcamInstanceRef.current.canvas);
                 const sorted = prediction.sort((a, b) => b.probability - a.probability);
                 const topResult = sorted[0];
-                const now = Date.now();
 
-                // Stabilizer Logic
                 if (topResult.probability > CONFIDENCE_THRESHOLD && isValidTrash(topResult.className)) {
                     if (topResult.className === currentClassRef.current) {
                         stabilityCounterRef.current += 1;
                     } else {
                         currentClassRef.current = topResult.className;
-                        stabilityCounterRef.current = 0;
+                        stabilityCounterRef.current = 1;
                     }
                 } else {
-                    stabilityCounterRef.current = Math.max(0, stabilityCounterRef.current - 1);
+                    stabilityCounterRef.current = 0;
+                    currentClassRef.current = null;
                 }
 
-                // Trigger Auto Send
-                if (stabilityCounterRef.current >= STABILITY_FRAMES && !isSendingRef.current) {
+                setPredictions(sorted.slice(0, 3));
+                setBestGuess(topResult.probability > 0.60 && isValidTrash(topResult.className) ? topResult.className : null);
+                
+                const progress = Math.min(100, (stabilityCounterRef.current / STABILITY_COUNT) * 100);
+                setScanProgress(progress);
+
+                if (stabilityCounterRef.current >= STABILITY_COUNT && !isSendingRef.current) {
                     handleLapor(currentClassRef.current!);
                 }
-
-                // Update UI
-                if (now - lastUiUpdateRef.current > UI_UPDATE_DELAY) {
-                    setPredictions(sorted.slice(0, 3));
-                    setBestGuess(topResult.probability > 0.45 ? topResult.className : null);
-                    
-                    const progress = Math.min(100, (stabilityCounterRef.current / STABILITY_FRAMES) * 100);
-                    setScanProgress(progress);
-                    lastUiUpdateRef.current = now;
-                }
             }
+
             requestRef.current = window.requestAnimationFrame(loop);
         }
     };
@@ -173,7 +161,6 @@ export default function ScanPage() {
 
         if (webcamRef.current) {
             webcamRef.current.innerHTML = ''; 
-            // Perbaikan: Menggunakan object-contain agar kamera tidak terpotong
             webcam.canvas.className = "w-full h-full object-contain transform scale-x-[-1]";
             webcamRef.current.appendChild(webcam.canvas);
         }
@@ -182,7 +169,6 @@ export default function ScanPage() {
         requestRef.current = window.requestAnimationFrame(loop);
 
       } catch (error) {
-        console.error("AI Init Error:", error);
         if (isMountedRef.current) {
             setErrorMessage("Kamera tidak dapat diakses.");
         }
@@ -195,10 +181,9 @@ export default function ScanPage() {
       isMountedRef.current = false;
       if (requestRef.current) window.cancelAnimationFrame(requestRef.current);
       if (webcamInstanceRef.current) {
-        try { 
+        try {
             webcamInstanceRef.current.stop(); 
         } catch (error) {
-            // Abaikan error jika kamera sudah berhenti
         }
       }
     };
@@ -207,8 +192,7 @@ export default function ScanPage() {
   return (
     <main className="fixed inset-0 bg-[#fefaf0] overflow-hidden flex flex-col font-sans select-none">
       <Toaster position="top-center" />
-
-      {/* --- HEADER --- */}
+      
       <header className="absolute top-0 left-0 right-0 z-30 pt-safe-top px-6 py-6 flex justify-between items-start pointer-events-none">
         <Link href="/dashboard" className="pointer-events-auto group flex items-center justify-center w-12 h-12 bg-[#fefaf0] shadow-md rounded-full border-2 border-[#8ac640] active:scale-95 transition-all hover:bg-[#8ac640]">
             <ArrowLeft size={24} className="text-[#135433] group-hover:text-white" />
@@ -224,11 +208,8 @@ export default function ScanPage() {
         </div>
       </header>
 
-      {/* --- VIEWPORT KAMERA --- */}
-      {/* Perbaikan: min-h-[50vh] flex-1 bg-[#0a311d] agar gambar muat dengan baik di desktop */}
       <div className="relative flex-1 min-h-[50vh] bg-[#0a311d] w-full rounded-b-[2.5rem] md:rounded-b-[3.5rem] overflow-hidden shadow-2xl z-10 flex items-center justify-center">
         
-        {/* Loading / Error State */}
         {!isCameraReady && (
              <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-[#fefaf0] text-center px-6">
                 {errorMessage ? (
@@ -254,18 +235,14 @@ export default function ScanPage() {
              </div>
         )}
 
-        {/* Video Feed */}
         <div ref={webcamRef} className="absolute inset-0 w-full h-full z-0 flex items-center justify-center p-4 md:p-8" />
         
-        {/* --- OVERLAYS VISUAL --- */}
         {isCameraReady && !isProcessing && (
             <>
                 <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_50%,rgba(10,49,29,0.8)_100%)] z-10" />
-
-                {/* Scan Line Laser */}
+                
                 <div className="absolute inset-x-0 h-1 bg-[#8ac640]/80 shadow-[0_0_40px_rgba(138,198,64,0.8)] z-10 animate-[scan_3s_ease-in-out_infinite]" />
-
-                {/* RETICLE (Kotak Bidik Tengah) - Disesuaikan agar lebih responsif */}
+                
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] max-w-[280px] aspect-square border-2 border-white/20 rounded-3xl z-10 pointer-events-none">
                     <div className="absolute top-0 left-0 w-8 h-8 border-t-8 border-l-8 border-[#8ac640] rounded-tl-xl -mt-1 -ml-1"></div>
                     <div className="absolute top-0 right-0 w-8 h-8 border-t-8 border-r-8 border-[#8ac640] rounded-tr-xl -mt-1 -mr-1"></div>
@@ -273,15 +250,14 @@ export default function ScanPage() {
                     <div className="absolute bottom-0 right-0 w-8 h-8 border-b-8 border-r-8 border-[#8ac640] rounded-br-xl -mb-1 -mr-1"></div>
                 </div>
 
-                {/* Progress Circle (Indikator Auto-Lock) */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                      <div className={cn("relative transition-all duration-300 ease-out", scanProgress > 5 ? 'scale-100 opacity-100' : 'scale-90 opacity-0')}>
                         <svg className="w-64 h-64 md:w-80 md:h-80 -rotate-90 drop-shadow-md">
                              <circle cx="50%" cy="50%" r="48%" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/10" />
                              <circle 
-                                cx="50%" cy="50%" r="48%" 
-                                stroke="currentColor" strokeWidth="8" fill="transparent" 
-                                className="text-[#8ac640] transition-all duration-100 ease-linear"
+                                 cx="50%" cy="50%" r="48%" 
+                                 stroke="currentColor" strokeWidth="8" fill="transparent" 
+                                 className="text-[#8ac640] transition-all duration-100 ease-linear"
                                 strokeDasharray={880} 
                                 strokeDashoffset={880 - (880 * scanProgress) / 100}
                                 strokeLinecap="round"
@@ -296,10 +272,8 @@ export default function ScanPage() {
         )}
       </div>
 
-      {/* --- FOOTER & CONTROLS --- */}
       <div className="relative z-20 shrink-0 bg-[#fefaf0] pt-6 pb-6 px-6 flex flex-col justify-between overflow-y-auto">
-         
-         <div className="max-w-3xl mx-auto w-full">
+           <div className="max-w-3xl mx-auto w-full">
              <div className="flex justify-between items-end mb-4">
                  <div>
                     <p className="text-xs text-[#8ac640] font-black uppercase tracking-widest mb-1">
@@ -310,12 +284,11 @@ export default function ScanPage() {
                     </h2>
                  </div>
                  <div className={cn("w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center border-4 transition-all shrink-0 ml-4", 
-                    bestGuess ? "bg-[#8ac640] border-[#8ac640] text-[#135433] shadow-lg" : "bg-white border-gray-200 text-gray-400")}>
+                     bestGuess ? "bg-[#8ac640] border-[#8ac640] text-[#135433] shadow-lg" : "bg-white border-gray-200 text-gray-400")}>
                      {isProcessing ? <Loader2 className="animate-spin w-6 h-6 md:w-7 md:h-7" /> : <Scan className="w-6 h-6 md:w-7 md:h-7" />}
                  </div>
              </div>
 
-             {/* Bar Probabilitas */}
              <div className="space-y-2 mb-4 bg-white p-4 rounded-3xl border-2 border-gray-100 shadow-sm">
                 {predictions.length > 0 ? predictions.map((pred, i) => (
                     <div key={i} className="flex items-center gap-3">
@@ -325,7 +298,7 @@ export default function ScanPage() {
                         <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
                             <div 
                                 className={cn("h-full rounded-full transition-all duration-300", 
-                                    pred.className === bestGuess ? 'bg-linear-to-r from-[#8ac640] to-emerald-400' : 'bg-gray-300')}
+                                    pred.className === bestGuess ? 'bg-gradient-to-r from-[#8ac640] to-emerald-400' : 'bg-gray-300')}
                                 style={{ width: `${pred.probability * 100}%` }}
                             />
                         </div>
@@ -336,7 +309,6 @@ export default function ScanPage() {
                 )}
              </div>
 
-             {/* Pesan Edukasi */}
              <div className="flex items-start gap-2 mb-4 px-2">
                 <AlertCircle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
                 <p className="text-[11px] md:text-xs text-gray-500 font-medium leading-tight">
@@ -344,15 +316,14 @@ export default function ScanPage() {
                 </p>
              </div>
 
-             {/* Tombol Manual Action */}
              <button 
-                onClick={() => bestGuess && handleLapor(bestGuess, true)}
+                 onClick={() => bestGuess && handleLapor(bestGuess, true)}
                 disabled={!bestGuess || isProcessing}
                 className={cn(
                     "w-full py-4 md:py-5 rounded-[2rem] font-black text-base md:text-lg tracking-wide flex items-center justify-center gap-3 transition-all duration-300 border-b-4",
                     bestGuess && !isProcessing 
-                        ? "bg-[#135433] hover:bg-[#0a311d] text-[#8ac640] border-[#0a311d] shadow-xl active:translate-y-1 active:border-b-0" 
-                        : "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+                         ? "bg-[#135433] hover:bg-[#0a311d] text-[#8ac640] border-[#0a311d] shadow-xl active:translate-y-1 active:border-b-0" 
+                         : "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
                 )}
              >
                 {isProcessing ? (

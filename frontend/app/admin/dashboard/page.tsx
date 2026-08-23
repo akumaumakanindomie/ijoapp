@@ -6,88 +6,181 @@ import Link from 'next/link';
 import Cookies from 'js-cookie';
 import api from '@/lib/axios';
 import toast, { Toaster } from 'react-hot-toast';
-import { 
-  Users, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  LogOut, 
-  Settings, 
-  Search, 
-  Filter,
-  ShieldAlert,
-  Ban,
-  RefreshCw,
-  MoreVertical,
-  LayoutDashboard
-} from 'lucide-react';
-// 👇 IMPORT HELPER
 import { getDriveImage } from '@/app/utils/driveHelper';
+import {
+  Layout,
+  LogIn,
+  PanelBottom,
+  Save,
+  ArrowLeft,
+  LogOut,
+  Loader2,
+  Image as ImageIcon,
+  Settings,
+  Lightbulb,
+  Plus,
+  Trash2,
+  BookOpen
+} from 'lucide-react';
 
-interface User {
-  _id: string;
-  fullName: string;
-  email: string;
-  schoolClass: string;
-  role: string;
-  status: 'pending' | 'active' | 'rejected';
-  createdAt: string;
+interface HeroSection {
+  title: string;
+  subtitle: string;
+  cta_text: string;
+  hero_image: string;
 }
 
-export default function AdminDashboard() {
+interface AuthSection {
+  logo_emoji: string;
+  project_name: string;
+  login_title_start: string;
+  login_title_end: string;
+  login_desc: string;
+  register_title_start: string;
+  register_title_end: string;
+  register_desc: string;
+  register_quote: string;
+  feature_card_title: string;
+  feature_card_desc: string;
+}
+
+interface FooterInfo {
+  about: string;
+  contact: string;
+  address: string;
+  social_ig: string;
+}
+
+interface TipItem {
+  title: string;
+  desc: string;
+}
+
+interface ArticleItem {
+  title: string;
+  image: string;
+  content: string;
+}
+
+interface ContentData {
+  hero_section: HeroSection;
+  auth_section: AuthSection;
+  footer_info: FooterInfo;
+  tips_section: TipItem[];
+  articles_section: ArticleItem[];
+  [key: string]: HeroSection | AuthSection | FooterInfo | TipItem[] | ArticleItem[];
+}
+
+export default function AdminContentPage() {
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // State Filter & Search
-  const [filter, setFilter] = useState<'all' | 'pending' | 'active'>('pending');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [logoEmoji, setLogoEmoji] = useState('🛡️');
+  const [saving, setSaving] = useState(false);
 
-  // Fetch Data
-  const fetchUsersAndContent = async () => {
-    try {
-      const userRes = await api.get('/users');
-      setUsers(userRes.data);
+  const [content, setContent] = useState<ContentData>({
+    hero_section: { title: '', subtitle: '', cta_text: '', hero_image: '' },
+    auth_section: { logo_emoji: '', project_name: '', login_title_start: '', login_title_end: '', login_desc: '', register_title_start: '', register_title_end: '', register_desc: '', register_quote: '', feature_card_title: '', feature_card_desc: '' },
+    footer_info: { about: '', contact: '', address: '', social_ig: '' },
+    tips_section: [],
+    articles_section: [],
+  });
 
-      const contentRes = await api.get('/content/public');
-      if (contentRes.data?.auth_section?.logo_emoji) {
-          setLogoEmoji(contentRes.data.auth_section.logo_emoji);
-      }
-    } catch (error) {
-      console.error('Gagal load data:', error);
-      toast.error('Gagal memuat data.');
-    } finally {
-      // Delay sedikit biar animasi loading kerasa
-      setTimeout(() => setLoading(false), 800);
-    }
-  };
+  const [activeTab, setActiveTab] = useState('hero');
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/content/public');
+        if (response.data) {
+             setContent((prev) => ({
+                ...prev,
+                hero_section: { ...prev.hero_section, ...response.data.hero_section },
+                auth_section: { ...prev.auth_section, ...response.data.auth_section },
+                footer_info: { ...prev.footer_info, ...response.data.footer_info },
+                tips_section: response.data.tips_section || [],
+                articles_section: response.data.articles_section || [],
+             }));
+        }
+      } catch (error) {
+        toast.error('Gagal mengambil data konten.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const token = Cookies.get('token');
-    if (!token) router.push('/login');
-    fetchUsersAndContent();
+    if (!token) {
+        router.push('/login');
+    } else {
+        fetchData();
+    }
   }, [router]);
 
-  const handleStatusChange = async (userId: string, newStatus: 'active' | 'rejected', userName: string) => {
-      // Custom toast confirm bisa ditambahkan disini, tapi kita pakai confirm standar dulu biar cepat
-      const confirmMsg = newStatus === 'active' 
-        ? `Setujui akun ${userName}?` 
-        : `Tolak/Blokir akun ${userName}?`;
-      
-      if (!confirm(confirmMsg)) return;
+  const handleInputChange = (section: string, field: string, value: string) => {
+    setContent((prev: ContentData) => {
+      const currentSection = prev[section];
+      if (Array.isArray(currentSection)) return prev;
 
-      const toastId = toast.loading('Memproses...');
-      try {
-          await api.patch(`/users/${userId}/status`, { status: newStatus });
-          toast.success(`${newStatus === 'active' ? 'Akun Aktif ✅' : 'Akun Ditolak 🚫'}`, { id: toastId });
-          
-          // Optimistic update atau refetch
-          const response = await api.get('/users');
-          setUsers(response.data);
-      } catch (error) {
-          toast.error('Gagal mengubah status.', { id: toastId });
-      }
+      const updatedSection = {
+        ...(currentSection as unknown as Record<string, string>),
+        [field]: value
+      };
+
+      return {
+        ...prev,
+        [section]: updatedSection
+      } as ContentData;
+    });
+  };
+
+  const handleTipChange = (index: number, field: keyof TipItem, value: string) => {
+    const newTips = [...content.tips_section];
+    newTips[index][field] = value;
+    setContent(prev => ({ ...prev, tips_section: newTips }));
+  };
+
+  const handleAddTip = () => {
+    setContent(prev => ({
+        ...prev,
+        tips_section: [...prev.tips_section, { title: 'Judul Tips Baru', desc: 'Deskripsi singkat tips...' }]
+    }));
+  };
+
+  const handleRemoveTip = (index: number) => {
+    const newTips = content.tips_section.filter((_, i) => i !== index);
+    setContent(prev => ({ ...prev, tips_section: newTips }));
+  };
+
+  const handleArticleChange = (index: number, field: keyof ArticleItem, value: string) => {
+    const newArticles = [...content.articles_section];
+    newArticles[index][field] = value;
+    setContent(prev => ({ ...prev, articles_section: newArticles }));
+  };
+
+  const handleAddArticle = () => {
+    setContent(prev => ({
+        ...prev,
+        articles_section: [...prev.articles_section, { title: 'Judul Artikel', image: '', content: 'Isi artikel...' }]
+    }));
+  };
+
+  const handleRemoveArticle = (index: number) => {
+    const newArticles = content.articles_section.filter((_, i) => i !== index);
+    setContent(prev => ({ ...prev, articles_section: newArticles }));
+  };
+
+  const handleSave = async (section: string) => {
+    setSaving(true);
+    try {
+      await api.post('/content/update', {
+        key: section,
+        value: content[section]
+      });
+      toast.success('Perubahan berhasil disimpan!');
+    } catch (error) {
+      toast.error('Gagal menyimpan.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleLogout = () => {
@@ -95,275 +188,485 @@ export default function AdminDashboard() {
       router.push('/login');
   };
 
-  // Logic Filter
-  const filteredUsers = users.filter(user => {
-      const matchesFilter = filter === 'all' ? true : user.status === filter;
-      const matchesSearch = user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            user.schoolClass.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesFilter && matchesSearch;
-  });
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
+        <p className="text-slate-500 font-medium">Memuat CMS...</p>
+    </div>
+  );
 
-  if (loading) {
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-            <p className="font-mono text-emerald-400 animate-pulse">MEMUAT DATA ADMIN...</p>
-        </div>
-    );
-  }
+  const hero = content.hero_section as HeroSection;
+  const auth = content.auth_section as AuthSection;
+  const footer = content.footer_info as FooterInfo;
+  const tips = content.tips_section as TipItem[];
+  const articles = content.articles_section as ArticleItem[];
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 relative overflow-x-hidden selection:bg-indigo-100">
+    <div className="min-h-screen bg-[#F1F5F9] font-sans text-slate-800 flex flex-col">
       <Toaster position="top-right" />
       
-      {/* BACKGROUND DECOR */}
-      <div className="fixed inset-0 pointer-events-none -z-10">
-          <div className="absolute top-0 w-full h-[300px] bg-gradient-to-b from-slate-900 to-slate-800"></div>
-          <div className="absolute top-[200px] left-0 w-full h-[200px] bg-gradient-to-b from-slate-800 to-slate-50"></div>
-      </div>
-
-      {/* --- NAVBAR --- */}
-      <nav className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-700 px-6 py-4 shadow-2xl">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 shadow-inner overflow-hidden hover:scale-105 transition-transform cursor-pointer">
-                     {(logoEmoji.includes('http') || logoEmoji.includes('/')) ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={getDriveImage(logoEmoji)} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                     ) : (
-                        <span className="text-2xl">{logoEmoji}</span>
-                     )}
-                  </div>
-                  <div>
-                      <h1 className="font-bold text-white text-lg tracking-tight">Admin Console</h1>
-                      <p className="text-xs text-emerald-400 font-medium tracking-wide">Administrator Access</p>
-                  </div>
+      <nav className="bg-slate-900 text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+          <div className="flex items-center gap-3">
+              <div className="bg-white/10 p-2 rounded-lg border border-white/10">
+                <Settings className="w-5 h-5" />
               </div>
-
-              <div className="flex items-center gap-4">
-                <Link 
-                  href="/admin/dashboard/content" 
-                  className="hidden md:flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-lg transition-all border border-white/5"
-                >
-                    <Settings className="w-4 h-4" />
-                    <span>CMS Settings</span>
-                </Link>
-
-                <button onClick={handleLogout} className="flex items-center gap-2 text-xs font-bold bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 rounded-lg transition-all shadow-lg hover:shadow-red-500/30 hover:-translate-y-0.5">
-                    <LogOut className="w-4 h-4" />
-                    <span>Keluar</span>
-                </button>
+              <div>
+                  <h1 className="font-bold text-base leading-none">CMS Content</h1>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Website Content Manager</p>
               </div>
+          </div>
+          <div className="flex items-center gap-4 text-sm font-medium">
+              <Link href="/admin/dashboard" className="text-slate-400 hover:text-white flex items-center gap-2 transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Dashboard
+              </Link>
+              <div className="h-4 w-px bg-slate-700"></div>
+              <button onClick={handleLogout} className="text-red-400 hover:text-red-300 flex items-center gap-2 transition-colors">
+                  <LogOut className="w-4 h-4" /> Keluar
+              </button>
           </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto p-6 md:p-8 -mt-2 space-y-8 animate-in slide-in-from-bottom-8 fade-in duration-700">
-          
-          {/* --- STATS CARDS (Floating Style) --- */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Total User */}
-              <div className="bg-white p-6 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300">
-                  <div>
-                      <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Total Siswa</p>
-                      <p className="text-4xl font-black text-slate-800">{users.length}</p>
-                  </div>
-                  <div className="h-14 w-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                      <Users className="w-7 h-7" />
-                  </div>
-              </div>
-
-              {/* Pending */}
-              <div className="bg-white p-6 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
-                  <div className="relative z-10">
-                      <p className="text-yellow-600 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
-                          Menunggu <span className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse"></span>
-                      </p>
-                      <p className="text-4xl font-black text-slate-800">{users.filter(u => u.status === 'pending').length}</p>
-                  </div>
-                  <div className="h-14 w-14 rounded-2xl bg-yellow-50 text-yellow-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform relative z-10">
-                      <Clock className="w-7 h-7" />
-                  </div>
-                  {/* Decorative Blob */}
-                  <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-yellow-100 rounded-full blur-2xl opacity-50"></div>
-              </div>
-
-              {/* Active */}
-              <div className="bg-white p-6 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300">
-                  <div>
-                      <p className="text-emerald-600 text-xs font-bold uppercase tracking-wider mb-2">Siswa Aktif</p>
-                      <p className="text-4xl font-black text-slate-800">{users.filter(u => u.status === 'active').length}</p>
-                  </div>
-                  <div className="h-14 w-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                      <CheckCircle className="w-7 h-7" />
-                  </div>
-              </div>
-          </div>
-
-          {/* --- CONTROL BAR (Search & Filter) --- */}
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-              <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto p-1">
-                  {(['pending', 'active', 'all'] as const).map((f) => (
-                      <button
-                        key={f}
-                        onClick={() => setFilter(f)}
-                        className={`px-5 py-2.5 text-xs font-bold rounded-xl transition-all border whitespace-nowrap ${
-                            filter === f 
-                            ? f === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200 shadow-sm' 
-                            : f === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
-                            : 'bg-slate-800 text-white border-slate-800 shadow-sm'
-                            : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50'
-                        }`}
-                      >
-                          {f === 'pending' ? '⏳ Perlu Persetujuan' : f === 'active' ? '✅ Siswa Aktif' : '📋 Semua Data'}
-                      </button>
-                  ))}
-              </div>
-
-              <div className="relative w-full md:w-72 group">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <input 
-                      type="text" 
-                      placeholder="Cari siswa, email, atau kelas..." 
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all hover:bg-white"
-                  />
-              </div>
-          </div>
-
-          {/* --- DATA TABLE --- */}
-          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
-              <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                      <thead className="bg-slate-50/80 text-slate-500 text-[11px] uppercase font-bold tracking-wider border-b border-slate-100">
-                          <tr>
-                              <th className="p-6 pl-8">Identitas Siswa</th>
-                              <th className="p-6">Info Kelas</th>
-                              <th className="p-6">Status Akun</th>
-                              <th className="p-6">Waktu Daftar</th>
-                              <th className="p-6 text-center">Aksi / Kontrol</th>
-                          </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-sm">
-                          {filteredUsers.length === 0 ? (
-                              <tr>
-                                  <td colSpan={5} className="p-16 text-center">
-                                      <div className="flex flex-col items-center justify-center text-slate-300">
-                                          <Filter className="w-16 h-16 mb-4 opacity-20" />
-                                          <p className="font-bold text-lg text-slate-500">Data Tidak Ditemukan</p>
-                                          <p className="text-xs mt-1">Coba ubah filter atau kata kunci pencarian.</p>
-                                      </div>
-                                  </td>
-                              </tr>
-                          ) : (
-                              filteredUsers.map((user) => (
-                                  <tr key={user._id} className="group hover:bg-slate-50/50 transition-colors">
-                                      <td className="p-5 pl-8">
-                                          <div className="flex items-center gap-4">
-                                              {/* Avatar Dinamis */}
-                                              <div className="h-11 w-11 rounded-full bg-indigo-50 p-0.5 border-2 border-indigo-100 group-hover:border-indigo-300 transition-colors">
-                                                  <img 
-                                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.fullName}&backgroundColor=e0e7ff`} 
-                                                    alt="Avatar" 
-                                                    className="h-full w-full rounded-full" 
-                                                  />
-                                              </div>
-                                              <div>
-                                                  <p className="font-bold text-slate-800 text-base">{user.fullName}</p>
-                                                  <p className="text-xs text-slate-400 font-medium">{user.email}</p>
-                                              </div>
-                                          </div>
-                                      </td>
-                                      
-                                      <td className="p-5">
-                                          <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 group-hover:bg-white group-hover:shadow-sm transition-all">
-                                              {user.schoolClass}
-                                          </span>
-                                      </td>
-                                      
-                                      <td className="p-5">
-                                          {user.status === 'pending' && (
-                                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-100">
-                                                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span> Pending
-                                              </span>
-                                          )}
-                                          {user.status === 'active' && (
-                                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                                  <CheckCircle className="w-3 h-3" /> Aktif
-                                              </span>
-                                          )}
-                                          {user.status === 'rejected' && (
-                                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-100">
-                                                  <Ban className="w-3 h-3" /> Ditolak
-                                              </span>
-                                          )}
-                                      </td>
-                                      
-                                      <td className="p-5 text-slate-500 text-xs font-medium">
-                                          {new Date(user.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                          <span className="block text-[10px] text-slate-300 mt-0.5">
-                                              {new Date(user.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute:'2-digit' })}
-                                          </span>
-                                      </td>
-                                      
-                                      <td className="p-5 text-center">
-                                          <div className="flex items-center justify-center gap-2">
-                                              
-                                              {/* ACTION FOR PENDING */}
-                                              {user.status === 'pending' && (
-                                                  <>
-                                                      <button 
-                                                        onClick={() => handleStatusChange(user._id, 'active', user.fullName)}
-                                                        className="h-9 w-9 flex items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-500/30 transition-all transform hover:scale-110" 
-                                                        title="Setujui Masuk"
-                                                      >
-                                                          <CheckCircle className="w-5 h-5" />
-                                                      </button>
-                                                      <button 
-                                                        onClick={() => handleStatusChange(user._id, 'rejected', user.fullName)}
-                                                        className="h-9 w-9 flex items-center justify-center rounded-lg bg-red-100 text-red-600 hover:bg-red-500 hover:text-white hover:shadow-lg hover:shadow-red-500/30 transition-all transform hover:scale-110" 
-                                                        title="Tolak Pendaftaran"
-                                                      >
-                                                          <XCircle className="w-5 h-5" />
-                                                      </button>
-                                                  </>
-                                              )}
-
-                                              {/* ACTION FOR ACTIVE (CARD BLOKIR) */}
-                                              {user.status === 'active' && (
-                                                  <button 
-                                                    onClick={() => handleStatusChange(user._id, 'rejected', user.fullName)}
-                                                    className="group/btn flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-xl transition-all duration-300 shadow-sm hover:shadow-red-600/30"
-                                                    title="Blokir Akses Siswa Ini"
-                                                  >
-                                                     <ShieldAlert className="w-4 h-4 text-red-500 group-hover/btn:text-white transition-colors" />
-                                                     <span className="text-xs font-bold text-red-600 group-hover/btn:text-white transition-colors">BLOKIR</span>
-                                                  </button>
-                                              )}
-
-                                              {/* ACTION FOR REJECTED */}
-                                              {user.status === 'rejected' && (
-                                                   <button 
-                                                     onClick={() => handleStatusChange(user._id, 'active', user.fullName)}
-                                                     className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-transparent hover:border-emerald-200"
-                                                   >
-                                                      <RefreshCw className="w-3 h-3" /> Pulihkan
-                                                   </button>
-                                              )}
-                                          </div>
-                                      </td>
-                                  </tr>
-                              ))
-                          )}
-                      </tbody>
-                  </table>
-              </div>
+      <main className="flex-1 max-w-6xl mx-auto w-full p-6">
+          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden flex flex-col md:flex-row h-[calc(100vh-120px)]">
               
-              <div className="bg-slate-50 border-t border-slate-100 p-4 text-center">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                      Database System v1.0 • {users.length} Total Data
-                  </p>
+              <div className="w-full md:w-64 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-4 space-y-2 shrink-0">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">Navigasi Halaman</p>
+                  
+                  <button 
+                     onClick={() => setActiveTab('hero')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'hero' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  >
+                      <Layout className="w-4 h-4" />
+                      Hero (Beranda)
+                  </button>
+
+                  <button 
+                     onClick={() => setActiveTab('auth')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'auth' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  >
+                      <LogIn className="w-4 h-4" />
+                      Login & Register
+                  </button>
+                  
+                  <button 
+                     onClick={() => setActiveTab('tips')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'tips' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  >
+                      <Lightbulb className="w-4 h-4" />
+                      Tips & Trick
+                  </button>
+
+                  <button 
+                     onClick={() => setActiveTab('articles')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'articles' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  >
+                      <BookOpen className="w-4 h-4" />
+                      Artikel Edukasi
+                  </button>
+
+                  <button 
+                     onClick={() => setActiveTab('footer')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'footer' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  >
+                      <PanelBottom className="w-4 h-4" />
+                      Footer & Info
+                  </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
+                  <div className="p-8 max-w-3xl mx-auto">
+                  
+                  {activeTab === 'hero' && (
+                      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="border-b pb-4">
+                              <h2 className="text-2xl font-black text-slate-800">Edit Halaman Depan</h2>
+                              <p className="text-slate-500 text-sm">Sesuaikan teks dan gambar utama website.</p>
+                          </div>
+                          
+                          <div className="space-y-6">
+                              <div className="group">
+                                  <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Judul Besar (Headline)</label>
+                                  <input 
+                                     type="text" 
+                                     value={hero.title}
+                                    onChange={(e) => handleInputChange('hero_section', 'title', e.target.value)}
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none font-bold text-lg transition-all"
+                                  />
+                              </div>
+                              <div className="group">
+                                  <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Sub-Judul (Deskripsi)</label>
+                                  <textarea 
+                                     value={hero.subtitle}
+                                    onChange={(e) => handleInputChange('hero_section', 'subtitle', e.target.value)}
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none h-28 resize-none transition-all"
+                                  />
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div className="group">
+                                      <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Teks Tombol CTA</label>
+                                      <input 
+                                         type="text" 
+                                         value={hero.cta_text}
+                                        onChange={(e) => handleInputChange('hero_section', 'cta_text', e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                      />
+                                  </div>
+                                  <div className="group">
+                                      <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Link Gambar Hero</label>
+                                      <div className="relative">
+                                          <input 
+                                             type="text" 
+                                             value={hero.hero_image}
+                                            onChange={(e) => handleInputChange('hero_section', 'hero_image', e.target.value)}
+                                            placeholder="https://drive.google.com/..."
+                                            className="w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all truncate"
+                                          />
+                                          <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                      </div>
+                                  </div>
+                              </div>
+                              
+                              {hero.hero_image && (
+                                <div className="p-4 border border-dashed border-slate-300 rounded-2xl bg-slate-50 text-center relative group">
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Preview Gambar</p>
+                                    <div className="relative h-48 w-full rounded-lg overflow-hidden bg-slate-200">
+                                        <img 
+                                            src={getDriveImage(hero.hero_image)} 
+                                            alt="Preview Hero" 
+                                            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                                            referrerPolicy="no-referrer"
+                                        />
+                                    </div>
+                                </div>
+                              )}
+                          </div>
+
+                          <div className="pt-6 border-t flex justify-end">
+                              <button 
+                                 onClick={() => handleSave('hero_section')}
+                                 disabled={saving}
+                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                              >
+                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                              </button>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'auth' && (
+                      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="border-b pb-4">
+                              <h2 className="text-2xl font-black text-slate-800">Edit Login & Register</h2>
+                              <p className="text-slate-500 text-sm">Pengaturan tampilan halaman masuk dan daftar.</p>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="group">
+                                  <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Nama Project</label>
+                                  <input 
+                                     type="text" value={auth.project_name}
+                                    onChange={(e) => handleInputChange('auth_section', 'project_name', e.target.value)}
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all"
+                                  />
+                              </div>
+                              <div className="group">
+                                  <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Logo (Link Drive / Emoji)</label>
+                                  <div className="flex gap-3">
+                                      <input 
+                                         type="text" value={auth.logo_emoji}
+                                        onChange={(e) => handleInputChange('auth_section', 'logo_emoji', e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all"
+                                        placeholder="Paste Link / Emoji"
+                                      />
+                                      <div className="w-12 h-12 shrink-0 border rounded-xl bg-white flex items-center justify-center overflow-hidden shadow-sm">
+                                        {(auth.logo_emoji && (auth.logo_emoji.includes('http') || auth.logo_emoji.includes('/'))) ? (
+                                            <img src={getDriveImage(auth.logo_emoji)} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                        ) : (
+                                            <span className="text-2xl">{auth.logo_emoji || '🌍'}</span>
+                                        )}
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <div className="bg-slate-50 p-6 rounded-2xl space-y-5 border border-slate-200/60">
+                             <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                <span className="w-1 h-4 bg-emerald-500 rounded-full"></span>
+                                Halaman Login
+                             </h3>
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Judul Awal</label>
+                                    <input value={auth.login_title_start} onChange={(e) => handleInputChange('auth_section', 'login_title_start', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Judul Akhir (Warna)</label>
+                                    <input value={auth.login_title_end} onChange={(e) => handleInputChange('auth_section', 'login_title_end', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none text-emerald-600 font-bold" />
+                                </div>
+                             </div>
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">Deskripsi</label>
+                                <textarea value={auth.login_desc} onChange={(e) => handleInputChange('auth_section', 'login_desc', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none h-16 resize-none text-sm" />
+                             </div>
+                          </div>
+
+                          <div className="bg-slate-50 p-6 rounded-2xl space-y-5 border border-slate-200/60">
+                             <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
+                                Halaman Register
+                             </h3>
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Judul Awal</label>
+                                    <input value={auth.register_title_start} onChange={(e) => handleInputChange('auth_section', 'register_title_start', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Judul Akhir (Warna)</label>
+                                    <input value={auth.register_title_end} onChange={(e) => handleInputChange('auth_section', 'register_title_end', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none text-blue-600 font-bold" />
+                                </div>
+                             </div>
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">Deskripsi</label>
+                                <textarea value={auth.register_desc} onChange={(e) => handleInputChange('auth_section', 'register_desc', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none h-16 resize-none text-sm" />
+                             </div>
+                             <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">Quote Motivasi</label>
+                                <input value={auth.register_quote} onChange={(e) => handleInputChange('auth_section', 'register_quote', e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none text-sm italic text-slate-600" />
+                             </div>
+                          </div>
+
+                          <div className="pt-6 border-t flex justify-end">
+                              <button 
+                                 onClick={() => handleSave('auth_section')}
+                                 disabled={saving}
+                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                              >
+                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                              </button>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'tips' && (
+                      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="border-b pb-4 flex justify-between items-end">
+                              <div>
+                                <h2 className="text-2xl font-black text-slate-800">Tips & Trick</h2>
+                                <p className="text-slate-500 text-sm">Kelola daftar tips yang muncul di halaman depan.</p>
+                              </div>
+                              <button 
+                                 onClick={handleAddTip}
+                                className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                              >
+                                <Plus className="w-4 h-4" /> Tambah
+                              </button>
+                          </div>
+                          
+                          <div className="space-y-4">
+                              {tips.length === 0 && (
+                                <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-400">
+                                    <Lightbulb className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                    Belum ada tips. Tambahkan sekarang!
+                                </div>
+                              )}
+                              {tips.map((tip, index) => (
+                                <div key={index} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 group relative hover:shadow-md transition-shadow">
+                                    <button 
+                                         onClick={() => handleRemoveTip(index)}
+                                        className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors p-1"
+                                        title="Hapus Tips"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                    
+                                    <div className="grid gap-4 pr-8">
+                                        <div className="group/input">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Judul Tips</label>
+                                            <input 
+                                                 type="text" 
+                                                 value={tip.title}
+                                                onChange={(e) => handleTipChange(index, 'title', e.target.value)}
+                                                className="w-full p-2.5 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none font-bold text-slate-700"
+                                                placeholder="Contoh: Pisahkan Plastik"
+                                            />
+                                        </div>
+                                        <div className="group/input">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Deskripsi Singkat</label>
+                                            <textarea 
+                                                 value={tip.desc}
+                                                onChange={(e) => handleTipChange(index, 'desc', e.target.value)}
+                                                className="w-full p-2.5 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none h-20 resize-none text-sm text-slate-600"
+                                                placeholder="Penjelasan tips..."
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-5 left-0 w-1 h-12 bg-emerald-400 rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                </div>
+                              ))}
+                          </div>
+
+                          <div className="pt-6 border-t flex justify-end">
+                              <button 
+                                 onClick={() => handleSave('tips_section')}
+                                 disabled={saving}
+                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                              >
+                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                              </button>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'articles' && (
+                      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="border-b pb-4 flex justify-between items-end">
+                              <div>
+                                <h2 className="text-2xl font-black text-slate-800">Artikel Edukasi</h2>
+                                <p className="text-slate-500 text-sm">Kelola daftar artikel yang bisa dibaca pengguna.</p>
+                              </div>
+                              <button 
+                                 onClick={handleAddArticle}
+                                className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                              >
+                                <Plus className="w-4 h-4" /> Tambah
+                              </button>
+                          </div>
+                          
+                          <div className="space-y-6">
+                              {articles.length === 0 && (
+                                <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-400">
+                                    <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                    Belum ada artikel. Tambahkan sekarang!
+                                </div>
+                              )}
+                              {articles.map((article, index) => (
+                                <div key={index} className="bg-slate-50 p-6 rounded-2xl border border-slate-200 group relative hover:shadow-md transition-shadow">
+                                    <button 
+                                         onClick={() => handleRemoveArticle(index)}
+                                        className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors p-1"
+                                        title="Hapus Artikel"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                    
+                                    <div className="space-y-5 pr-8">
+                                        <div className="group/input">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Judul Artikel</label>
+                                            <input 
+                                                 type="text" 
+                                                 value={article.title}
+                                                onChange={(e) => handleArticleChange(index, 'title', e.target.value)}
+                                                className="w-full p-3 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none font-bold text-slate-700"
+                                                placeholder="Judul artikel yang menarik..."
+                                            />
+                                        </div>
+                                        <div className="group/input">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Link Gambar (Google Drive)</label>
+                                            <div className="relative">
+                                                <input 
+                                                     type="text" 
+                                                     value={article.image}
+                                                    onChange={(e) => handleArticleChange(index, 'image', e.target.value)}
+                                                    className="w-full pl-10 pr-3 py-3 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none text-sm"
+                                                    placeholder="https://drive.google.com/..."
+                                                />
+                                                <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            </div>
+                                            {article.image && (
+                                                <div className="mt-3 h-32 w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-200">
+                                                    <img src={getDriveImage(article.image)} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="group/input">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Isi Artikel</label>
+                                            <textarea 
+                                                 value={article.content}
+                                                onChange={(e) => handleArticleChange(index, 'content', e.target.value)}
+                                                className="w-full p-3 bg-white border border-slate-200 rounded-lg focus:border-emerald-500 outline-none h-48 resize-y text-sm text-slate-600 leading-relaxed"
+                                                placeholder="Tulis isi artikel di sini..."
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-6 left-0 w-1 h-12 bg-blue-400 rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                </div>
+                              ))}
+                          </div>
+
+                          <div className="pt-6 border-t flex justify-end">
+                              <button 
+                                 onClick={() => handleSave('articles_section')}
+                                 disabled={saving}
+                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                              >
+                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                              </button>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'footer' && (
+                      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="border-b pb-4">
+                              <h2 className="text-2xl font-black text-slate-800">Edit Footer & Kontak</h2>
+                              <p className="text-slate-500 text-sm">Informasi kontak dan media sosial di bagian bawah website.</p>
+                          </div>
+                          
+                          <div className="space-y-5">
+                              <div className="group">
+                                  <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Tentang Singkat</label>
+                                  <textarea 
+                                     value={footer.about}
+                                    onChange={(e) => handleInputChange('footer_info', 'about', e.target.value)}
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none h-28 resize-none transition-all"
+                                  />
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div className="group">
+                                      <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Email Kontak</label>
+                                      <input 
+                                         type="text" value={footer.contact}
+                                        onChange={(e) => handleInputChange('footer_info', 'contact', e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all"
+                                      />
+                                  </div>
+                                  <div className="group">
+                                      <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Instagram / Sosmed</label>
+                                      <input 
+                                         type="text" value={footer.social_ig}
+                                        onChange={(e) => handleInputChange('footer_info', 'social_ig', e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all"
+                                      />
+                                  </div>
+                              </div>
+                              <div className="group">
+                                  <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">Alamat Lengkap</label>
+                                  <textarea 
+                                     value={footer.address}
+                                    onChange={(e) => handleInputChange('footer_info', 'address', e.target.value)}
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none h-20 resize-none transition-all"
+                                  />
+                              </div>
+                          </div>
+
+                          <div className="pt-6 border-t flex justify-end">
+                              <button 
+                                 onClick={() => handleSave('footer_info')}
+                                 disabled={saving}
+                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                              >
+                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                              </button>
+                          </div>
+                      </div>
+                  )}
+
+                  </div>
               </div>
           </div>
       </main>

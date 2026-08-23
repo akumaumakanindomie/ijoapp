@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
@@ -7,9 +6,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import Cookies from 'js-cookie';
 import api from '@/lib/axios';
 import Link from 'next/link';
-// 👇 IMPORT ICONS (Lucide React)
-import { Mail, Lock, ArrowLeft, Loader2, LogIn } from 'lucide-react';
-// 👇 IMPORT HELPER
+import { Mail, Lock, ArrowLeft, Loader2, LogIn, ShieldCheck, UserCheck } from 'lucide-react';
 import { getDriveImage } from '@/app/utils/driveHelper';
 
 interface LoginFormInputs {
@@ -49,7 +46,7 @@ export default function LoginPage() {
             setContent(response.data.auth_section);
         }
       } catch (error) {
-        console.error("Gagal ambil konten login:", error);
+        console.error(error);
       } finally {
         setLoadingContent(false);
       }
@@ -60,16 +57,17 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormInputs>();
 
   const onSubmit: SubmitHandler<LoginFormInputs> = async (data) => {
     try {
       const response = await api.post('/auth/login', data);
-      const { accessToken, role } = response.data; 
+      const { accessToken, role } = response.data;
       
       Cookies.set('token', accessToken, { expires: 1 });
-      toast.success(`Login Berhasil! Halo ${role === 'admin' ? 'Admin' : 'Siswa'} 👋`, { icon: '🔓' });
+      toast.success(`Login Berhasil! Halo ${role === 'admin' ? 'Admin' : 'Siswa'} 🌍`, { icon: '👏' });
       
       setTimeout(() => {
         if (role === 'admin') {
@@ -78,18 +76,23 @@ export default function LoginPage() {
             router.push('/dashboard');
         }
       }, 1500);
-
     } catch (error) {
       const err = error as ApiError;
       const status = err.response?.status;
       const msg = err.response?.data?.message || 'Email atau password salah.';
       
       if (status === 403) {
-          toast.error(msg, { icon: '⏳', duration: 5000 });
+          toast.error(msg, { icon: '🚫', duration: 5000 });
       } else {
           toast.error(msg);
       }
     }
+  };
+
+  const handleJudgeLogin = () => {
+    setValue('email', 'juri@ijo.com');
+    setValue('password', 'jurikeren123');
+    handleSubmit(onSubmit)();
   };
 
   if (loadingContent) {
@@ -101,7 +104,7 @@ export default function LoginPage() {
   }
 
   const c = content || {
-      logo_emoji: '🌱',
+      logo_emoji: '🌍',
       project_name: 'IJO PROJECT',
       login_title_start: 'Selamat Datang',
       login_title_end: 'Kembali',
@@ -114,9 +117,7 @@ export default function LoginPage() {
     <div className="min-h-screen w-full flex bg-white font-sans text-emerald-950 selection:bg-emerald-200 selection:text-emerald-900">
       <Toaster position="top-center" />
 
-      {/* --- BAGIAN KIRI (Visual Branding / Banner) --- */}
       <div className="hidden lg:flex w-1/2 relative bg-emerald-950 overflow-hidden flex-col justify-between p-12 text-white">
-         {/* Background Orbs */}
          <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
             <div className="absolute top-[-20%] left-[-20%] w-[800px] h-[800px] rounded-full bg-emerald-600/30 blur-[150px]"></div>
             <div className="absolute bottom-[-20%] right-[-20%] w-[800px] h-[800px] rounded-full bg-teal-600/30 blur-[150px]"></div>
@@ -126,10 +127,9 @@ export default function LoginPage() {
             <Link href="/" className="flex items-center gap-4 mb-12 w-fit hover:opacity-80 transition-opacity cursor-pointer group">
                 <div className="h-14 w-14 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/10 overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
                     {(c.logo_emoji && (c.logo_emoji.includes('http') || c.logo_emoji.includes('/'))) ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img 
-                            src={getDriveImage(c.logo_emoji)} 
-                            alt="Logo"
+                        <img
+                             src={getDriveImage(c.logo_emoji)}
+                             alt="Logo"
                             className="w-full h-full object-cover"
                             referrerPolicy="no-referrer"
                         />
@@ -153,11 +153,10 @@ export default function LoginPage() {
             </div>
         </div>
 
-        {/* Feature Card Kecil di Kiri Bawah */}
         <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-emerald-900/50 hover:bg-white/10 transition-colors cursor-default">
             <div className="flex items-center gap-5">
                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-2xl shadow-lg">
-                    🏆
+                    🏆                 
                  </div>
                  <div>
                     <p className="font-bold text-white text-lg">{c.feature_card_title}</p>
@@ -167,50 +166,45 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* --- BAGIAN KANAN (Form Login) --- */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 lg:p-24 relative bg-white">
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 lg:p-24 relative bg-white overflow-y-auto">
          <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 text-emerald-800/60 hover:text-emerald-600 transition-colors font-bold text-sm group">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 
             Kembali ke Beranda
          </Link>
 
-         <div className="w-full max-w-md space-y-10 mt-10 lg:mt-0">
+         <div className="w-full max-w-md space-y-8 mt-16 lg:mt-0">
              <div className="text-center lg:text-left space-y-2">
                 <h2 className="text-4xl font-black text-emerald-950 tracking-tight">Masuk Akun</h2>
-                <p className="text-emerald-800/70 font-medium text-lg">Masukkan email sekolahmu untuk mulai belajar.</p>
+                <p className="text-emerald-800/70 font-medium text-lg">Masukkan kredensial untuk melanjutkan.</p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                
-                {/* Input Email */}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <div className={`group relative transition-all duration-300 rounded-2xl border-2 bg-emerald-50/30 ${errors.email ? 'border-red-200 bg-red-50' : 'border-emerald-100 focus-within:border-emerald-500 focus-within:bg-white focus-within:shadow-lg focus-within:shadow-emerald-500/10'}`}>
                     <div className="absolute top-1/2 -translate-y-1/2 left-4 text-emerald-800/40 group-focus-within:text-emerald-600 transition-colors">
                         <Mail className="w-5 h-5" />
                     </div>
                     <input 
                         type="email" 
-                        placeholder="Email Sekolah (contoh@sekolah.sch.id)"
+                        placeholder="Email (contoh@sekolah.sch.id)"
                         className="w-full bg-transparent pl-12 pr-4 py-4 outline-none text-emerald-950 font-semibold placeholder:text-emerald-800/30"
                         {...register('email', { required: 'Email wajib diisi' })}
                     />
                 </div>
                 {errors.email && <p className="text-xs text-red-500 ml-2 font-bold flex items-center gap-1 mt-1">⚠️ {errors.email.message}</p>}
 
-                {/* Input Password */}
                 <div className={`group relative transition-all duration-300 rounded-2xl border-2 bg-emerald-50/30 ${errors.password ? 'border-red-200 bg-red-50' : 'border-emerald-100 focus-within:border-emerald-500 focus-within:bg-white focus-within:shadow-lg focus-within:shadow-emerald-500/10'}`}>
                     <div className="absolute top-1/2 -translate-y-1/2 left-4 text-emerald-800/40 group-focus-within:text-emerald-600 transition-colors">
                         <Lock className="w-5 h-5" />
                     </div>
                     <input 
                         type="password" 
-                        placeholder="Kata Sandi Rahasia"
+                        placeholder="Kata Sandi"
                         className="w-full bg-transparent pl-12 pr-4 py-4 outline-none text-emerald-950 font-semibold placeholder:text-emerald-800/30"
                         {...register('password', { required: 'Password wajib diisi' })}
                     />
                 </div>
                 {errors.password && <p className="text-xs text-red-500 ml-2 font-bold flex items-center gap-1 mt-1">⚠️ {errors.password.message}</p>}
 
-                {/* Tombol Login */}
                 <button 
                     type="submit" disabled={isSubmitting}
                     className="w-full rounded-2xl bg-emerald-600 py-4 font-bold text-lg text-white shadow-xl shadow-emerald-500/30 transition-all hover:bg-emerald-500 hover:shadow-emerald-500/50 hover:-translate-y-1 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -229,14 +223,37 @@ export default function LoginPage() {
                 </button>
             </form>
 
-            <div className="text-center pt-4">
-                <p className="text-emerald-800/60 font-medium">
+            <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-emerald-100"></div>
+                <span className="shrink-0 px-4 text-xs font-bold text-emerald-800/40 uppercase tracking-widest">Atau</span>
+                <div className="flex-grow border-t border-emerald-100"></div>
+            </div>
+
+            <button 
+                onClick={handleJudgeLogin}
+                type="button"
+                className="w-full rounded-2xl bg-emerald-50 border-2 border-emerald-200 py-4 font-bold text-emerald-700 transition-all hover:bg-emerald-100 hover:border-emerald-300 active:scale-95 flex items-center justify-center gap-2"
+            >
+                <UserCheck className="w-5 h-5" />
+                Akses Cepat (Mode Juri)
+            </button>
+
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                    Sistem IJO2 dilindungi dengan algoritma enkripsi <strong className="text-slate-700">Bcrypt</strong> dan autentikasi <strong className="text-slate-700">JWT (JSON Web Token)</strong> berstandar industri.
+                </p>
+            </div>
+
+            <div className="text-center pt-2">
+                <p className="text-emerald-800/60 font-medium text-sm">
                     Belum punya akun?{' '}
                     <Link href="/register" className="font-extrabold text-emerald-600 hover:text-emerald-500 hover:underline decoration-2 underline-offset-4 transition-all">
-                        Daftar Gratis Sekarang
+                        Daftar Gratis
                     </Link>
                 </p>
             </div>
+
          </div>
       </div>
     </div>

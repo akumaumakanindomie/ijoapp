@@ -10,13 +10,14 @@ export function middleware(request: NextRequest) {
   const isUserRoute = pathname.startsWith('/dashboard');
   const isAuthRoute = ['/login', '/register'].includes(pathname);
 
-  // 2. Logic Jika BELUM Login (Tidak ada Token)
+  // 2. Logic Jika BELUM Login (Tidak ada Token / Guest Mode)
   if (!token) {
-    // Jika coba masuk ke Admin atau Dashboard tanpa token -> Tendang ke Login
-    if (isAdminRoute || isUserRoute) {
+    // REVISI LOMBA: Tamu (Juri) DIIZINKAN masuk ke /dashboard.
+    // Jika coba masuk ke /admin tanpa token -> Tendang ke Login
+    if (isAdminRoute) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
-    // Izinkan akses ke Landing Page, Login, Register
+    // Izinkan akses ke Landing Page, Login, Register, DAN /dashboard (Mode Tamu)
     return NextResponse.next();
   }
 
