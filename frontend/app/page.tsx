@@ -18,6 +18,9 @@ interface LandingData {
   auth_section?: {
     logo_emoji: string;
   };
+  video_section?: {
+    video_url: string;
+  };
   hero_section: {
     title: string;
     subtitle: string;
@@ -29,6 +32,7 @@ interface LandingData {
     desc: string;
   }>;
   articles_section?: Array<{
+    slug?: string;
     title: string;
     image: string;
     content: string;
@@ -45,15 +49,19 @@ export default function LandingPage() {
   const router = useRouter();
   const [data, setData] = useState<LandingData | null>(null);
   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
+         setLoading(true);
+         setError(null);
       try {
         const response = await api.get('/content/public');
         setData(response.data);
-      } catch {
-        console.error('Gagal memuat data konten');
+         } catch (requestError: any) {
+             console.error('Gagal memuat konten:', requestError.message, requestError.response?.data);
+             setError('Konten belum dapat dimuat. Pastikan server backend sedang berjalan, lalu coba lagi.');
       } finally {
         setLoading(false);
       }
@@ -87,7 +95,7 @@ export default function LandingPage() {
     }
   };
 
-  if (loading || !data) {
+   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fefaf0]">
         <div className="relative">
@@ -97,6 +105,22 @@ export default function LandingPage() {
       </div>
     );
   }
+
+   if (error || !data) {
+      return (
+         <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-[#fefaf0] p-6 text-center text-[#135433]">
+            <Loader2 className="h-14 w-14 text-[#8ac640]" />
+            <h1 className="text-2xl font-black">Konten belum tersedia</h1>
+            <p className="max-w-md font-medium text-[#135433]/70">{error || 'Terjadi kesalahan saat memuat halaman.'}</p>
+            <button
+               onClick={() => window.location.reload()}
+               className="rounded-full bg-[#135433] px-6 py-3 font-bold text-white transition-colors hover:bg-[#8ac640]"
+            >
+               Coba Lagi
+            </button>
+         </main>
+      );
+   }
 
   const navbarLogo = data.auth_section?.logo_emoji || '🌍';
 
@@ -209,6 +233,7 @@ export default function LandingPage() {
                       src={getDriveImage(data.hero_section.hero_image)}
                       alt="Hero"
                       fill
+                      priority
                       unoptimized
                       className="object-cover transform transition-transform hover:scale-105 duration-700"
                    />
@@ -244,16 +269,23 @@ export default function LandingPage() {
                <h2 className="text-4xl lg:text-5xl font-black text-[#135433] mb-6">Kenali IJO2 Lebih Dekat</h2>
                <p className="text-lg text-[#135433]/70 font-medium">Saksikan video pengenalan kami dan lihat bagaimana inovasi IJO2 bekerja menciptakan dampak positif untuk lingkungan sekitar.</p>
             </div>
-
+            
             <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-[#fefaf0] bg-[#135433] aspect-video group">
-               <video 
-                  controls 
-                  className="w-full h-full object-cover"
-                  poster="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=1200&auto=format&fit=crop"
-               >
-                  <source src="/video-lomba.mp4" type="video/mp4" />
-                  Browser Anda tidak mendukung pemutar video.
-               </video>
+               {data.video_section?.video_url && !isLoggingIn ? (
+                  <iframe
+                     key={data.video_section.video_url} // Wajib ada agar iframe refresh
+                     className="w-full h-full object-cover"
+                     src={data.video_section.video_url}
+                     title="Video IJO Project"
+                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                     allowFullScreen
+                     loading="lazy"
+                  ></iframe>
+               ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/50 font-bold bg-[#135433]">
+                     {isLoggingIn ? 'Mengalihkan...' : 'Video belum tersedia'}
+                  </div>
+               )}
             </div>
          </div>
       </section>
@@ -382,7 +414,7 @@ export default function LandingPage() {
                            <p className="text-[#135433]/80 font-medium leading-relaxed whitespace-pre-wrap text-sm line-clamp-3">
                               {article.content}
                            </p>
-                           <Link href="/artikel" className="mt-auto pt-6 inline-flex items-center text-sm font-black text-[#8ac640] hover:text-[#135433] transition-colors">
+                           <Link href={`/artikel/${article.slug || idx}`} className="mt-auto pt-6 inline-flex items-center text-sm font-black text-[#8ac640] hover:text-[#135433] transition-colors">
                               Baca Selengkapnya <ArrowRight className="w-4 h-4 ml-2" />
                            </Link>
                         </div>

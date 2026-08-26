@@ -20,6 +20,12 @@ export class ContentService {
       hero_image:
         'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=2070&auto=format&fit=crop',
     },
+    video_section: {
+      video_url: 'https://www.youtube.com/embed/V4CKqr6CtsI', 
+    },
+    articles_section: [
+      
+    ],
     auth_section: {
       logo_emoji: '🌱',
       project_name: 'IJO PROJECT',
@@ -63,23 +69,23 @@ export class ContentService {
       address: 'Yogyakarta, Indonesia',
       social_ig: '@ijo.project',
     },
-  };
+};
 
   async getPublicContent() {
     const dbContents = await this.contentModel.find().exec();
     const result = { ...this.defaultData };
 
     dbContents.forEach((item) => {
-      if (result[item.key]) {
-        result[item.key] = item.value;
-      }
-    });
+      if (Object.prototype.hasOwnProperty.call(result, item.key)) {
+            result[item.key] = item.value;
+          }
+        });
 
-    return result;
-  }
+        return result;
+    }
 
-  async updateContent(dto: UpdateContentDto) {
-    return this.contentModel.findOneAndUpdate(
+    async updateContent(dto: UpdateContentDto) {
+      return this.contentModel.findOneAndUpdate(
       { key: dto.key },
       { value: dto.value },
       { upsert: true, new: true },

@@ -20,7 +20,8 @@ import {
   Lightbulb,
   Plus,
   Trash2,
-  BookOpen
+  BookOpen,
+  Video
 } from 'lucide-react';
 
 interface HeroSection {
@@ -57,9 +58,14 @@ interface TipItem {
 }
 
 interface ArticleItem {
+  slug?: string;
   title: string;
   image: string;
   content: string;
+}
+
+interface VideoSection {
+  video_url: string;
 }
 
 interface ContentData {
@@ -68,7 +74,8 @@ interface ContentData {
   footer_info: FooterInfo;
   tips_section: TipItem[];
   articles_section: ArticleItem[];
-  [key: string]: HeroSection | AuthSection | FooterInfo | TipItem[] | ArticleItem[];
+  video_section: VideoSection;
+  [key: string]: HeroSection | AuthSection | FooterInfo | TipItem[] | ArticleItem[] | VideoSection;
 }
 
 export default function AdminContentPage() {
@@ -76,13 +83,14 @@ export default function AdminContentPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [content, setContent] = useState<ContentData>({
-    hero_section: { title: '', subtitle: '', cta_text: '', hero_image: '' },
-    auth_section: { logo_emoji: '', project_name: '', login_title_start: '', login_title_end: '', login_desc: '', register_title_start: '', register_title_end: '', register_desc: '', register_quote: '', feature_card_title: '', feature_card_desc: '' },
-    footer_info: { about: '', contact: '', address: '', social_ig: '' },
-    tips_section: [],
-    articles_section: [],
-  });
+    const [content, setContent] = useState<ContentData>({
+        hero_section: { title: '', subtitle: '', cta_text: '', hero_image: '' },
+        auth_section: { logo_emoji: '', project_name: '', login_title_start: '', login_title_end: '', login_desc: '', register_title_start: '', register_title_end: '', register_desc: '', register_quote: '', feature_card_title: '', feature_card_desc: '' },
+        footer_info: { about: '', contact: '', address: '', social_ig: '' },
+        tips_section: [],
+        articles_section: [],
+        video_section: { video_url: '' }, 
+    });
 
   const [activeTab, setActiveTab] = useState('hero');
 
@@ -97,7 +105,11 @@ export default function AdminContentPage() {
                 auth_section: { ...prev.auth_section, ...response.data.auth_section },
                 footer_info: { ...prev.footer_info, ...response.data.footer_info },
                 tips_section: response.data.tips_section || [],
-                articles_section: response.data.articles_section || [],
+                articles_section: (response.data.articles_section || []).map((a: any) => ({
+                    ...a,
+                    slug: a.slug || 'article-' + Math.random().toString(36).substr(2, 9)
+                })),
+                video_section: { ...prev.video_section, ...(response.data.video_section || {}) },
              }));
         }
       } catch (error) {
@@ -133,9 +145,12 @@ export default function AdminContentPage() {
   };
 
   const handleTipChange = (index: number, field: keyof TipItem, value: string) => {
-    const newTips = [...content.tips_section];
-    newTips[index][field] = value;
-    setContent(prev => ({ ...prev, tips_section: newTips }));
+    setContent(prev => {
+      const newTips = [...prev.tips_section];
+      // Gunakan spread operator pada object di dalam array agar React mendeteksi perubahan memori
+      newTips[index] = { ...newTips[index], [field]: value };
+      return { ...prev, tips_section: newTips };
+    });
   };
 
   const handleAddTip = () => {
@@ -146,26 +161,38 @@ export default function AdminContentPage() {
   };
 
   const handleRemoveTip = (index: number) => {
-    const newTips = content.tips_section.filter((_, i) => i !== index);
-    setContent(prev => ({ ...prev, tips_section: newTips }));
-  };
+    setContent(prev => ({
+      ...prev,
+      tips_section: prev.tips_section.filter((_, i) => i !== index)
+    }));
+  };    
 
   const handleArticleChange = (index: number, field: keyof ArticleItem, value: string) => {
-    const newArticles = [...content.articles_section];
-    newArticles[index][field] = value;
-    setContent(prev => ({ ...prev, articles_section: newArticles }));
+    setContent(prev => {
+      const newArticles = [...prev.articles_section];
+      // Gunakan spread operator pada object di dalam array agar React mendeteksi perubahan memori
+      newArticles[index] = { ...newArticles[index], [field]: value };
+      return { ...prev, articles_section: newArticles };
+    });
   };
 
   const handleAddArticle = () => {
     setContent(prev => ({
         ...prev,
-        articles_section: [...prev.articles_section, { title: 'Judul Artikel', image: '', content: 'Isi artikel...' }]
+        articles_section: [...prev.articles_section, { 
+            slug: 'article-' + Math.random().toString(36).substr(2, 9), // TAMBAHAN
+            title: 'Judul Artikel', 
+            image: '', 
+            content: 'Isi artikel...' 
+        }]
     }));
   };
 
   const handleRemoveArticle = (index: number) => {
-    const newArticles = content.articles_section.filter((_, i) => i !== index);
-    setContent(prev => ({ ...prev, articles_section: newArticles }));
+    setContent(prev => ({
+      ...prev,
+      articles_section: prev.articles_section.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSave = async (section: string) => {
@@ -181,7 +208,7 @@ export default function AdminContentPage() {
     } finally {
       setSaving(false);
     }
-  };
+  };  
 
   const handleLogout = () => {
       Cookies.remove('token');
@@ -200,6 +227,7 @@ export default function AdminContentPage() {
   const footer = content.footer_info as FooterInfo;
   const tips = content.tips_section as TipItem[];
   const articles = content.articles_section as ArticleItem[];
+  const video = content.video_section as VideoSection;  
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] font-sans text-slate-800 flex flex-col">
@@ -231,13 +259,21 @@ export default function AdminContentPage() {
               
               <div className="w-full md:w-64 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-4 space-y-2 shrink-0">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">Navigasi Halaman</p>
-                  
+
                   <button 
                      onClick={() => setActiveTab('hero')}
                     className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'hero' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
                   >
                       <Layout className="w-4 h-4" />
-                      Hero (Beranda)
+                      Hero (Home Page)
+                  </button>
+                  
+                  <button 
+                     onClick={() => setActiveTab('video')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'video' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  >
+                      <video className="w-4 h-4" />
+                      Video (Home Page)
                   </button>
 
                   <button 
@@ -245,7 +281,7 @@ export default function AdminContentPage() {
                     className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'auth' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
                   >
                       <LogIn className="w-4 h-4" />
-                      Login & Register
+                      Login & Register  
                   </button>
                   
                   <button 
@@ -275,6 +311,58 @@ export default function AdminContentPage() {
 
               <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
                   <div className="p-8 max-w-3xl mx-auto">
+
+                    {activeTab === 'video' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="border-b pb-4">
+                                <h2 className="text-2xl font-black text-slate-800">Edit Video Beranda</h2>
+                                <p className="text-slate-500 text-sm">Gunakan tautan sematkan (embed) dari YouTube.</p>
+                            </div>
+                            
+                            <div className="space-y-6">
+                                <div className="group">
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">
+                                        Embed URL (YouTube)
+                                    </label>
+                                    <input 
+                                        type="url" 
+                                        value={video.video_url}
+                                        onChange={(e) => handleInputChange('video_section', 'video_url', e.target.value)}
+                                        placeholder="https://www.youtube.com/embed/ID_VIDEO"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                                        Cara mendapatkan link: Buka video YouTube &rarr; Klik Bagikan (Share) &rarr; Sematkan (Embed) &rarr; Salin URL yang ada di dalam atribut <strong>src="..."</strong>.
+                                    </p>
+                                </div>
+                                
+                                {/* Opsi tambahan: Preview Iframe di Admin */}
+                                {video.video_url && video.video_url.includes('embed') && (
+                                    <div className="p-4 border border-dashed border-slate-300 rounded-2xl bg-slate-50">
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Preview Video</p>
+                                        <div className="aspect-video w-full rounded-lg overflow-hidden bg-slate-200">
+                                            <iframe 
+                                                src={video.video_url} 
+                                                className="w-full h-full"
+                                                allowFullScreen
+                                            ></iframe>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-6 border-t flex justify-end">
+                                <button 
+                                    onClick={() => handleSave('video_section')}
+                                    disabled={saving}
+                                    className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
                   
                   {activeTab === 'hero' && (
                       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

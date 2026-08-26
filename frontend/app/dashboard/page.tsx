@@ -458,7 +458,7 @@ export default function DashboardPage() {
                     Temukan berbagai inspirasi, wawasan baru, dan panduan praktis untuk gaya hidup ramah lingkungan. Jadilah bagian dari perubahan dengan terus belajar dan membaca kebiasaan baru yang berkelanjutan.
                 </p>
                 <Link href="/artikel" className="inline-flex items-center gap-2 px-8 py-4 rounded-full border-4 border-[#135433] text-[#135433] font-black hover:bg-[#135433] hover:text-[#8ac640] transition-colors shadow-sm active:scale-95 group">
-                    Baca di Web Kami! <ArrowRight className="w-5 h-5 stroke-[3] group-hover:translate-x-1 transition-transform" />
+                    Baca di Web Kami! <ArrowRight className="w-5 h-5 stroke-3 group-hover:translate-x-1 transition-transform" />
                 </Link>
             </div>
             
