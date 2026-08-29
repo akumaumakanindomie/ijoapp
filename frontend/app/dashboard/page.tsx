@@ -7,9 +7,9 @@ import Image from 'next/image';
 import api from '@/lib/axios';
 import toast, { Toaster } from 'react-hot-toast';
 import {
-  LogOut, Trophy, Gamepad2, ChevronRight, 
-  Sparkles, Leaf, Recycle, ArrowRight, 
-  Quote, Target, CheckCircle2
+    LogOut, Trophy, Gamepad2, ChevronRight, ArrowRightLeft,
+    Sparkles, Leaf, Recycle, ArrowRight, 
+    Quote, Target
 } from 'lucide-react';
 
 interface ItemData {
@@ -66,7 +66,7 @@ export default function DashboardPage() {
   const [greeting, setGreeting] = useState('Halo');
   const [showSelectModal, setShowSelectModal] = useState(false);
   const [selectLoading, setSelectLoading] = useState(false);
-  const [questClaimed, setQuestClaimed] = useState(false);
+    const [exchangeLoading, setExchangeLoading] = useState(false);
 
   useEffect(() => {
     const hours = new Date().getHours();
@@ -118,15 +118,15 @@ export default function DashboardPage() {
     setCheckInLoading(true);
     try {
       const response = await api.post('/items/checkin');
-      const { gainedXp, levelUp } = response.data;
+    const { gainedXp, levelUp, reward } = response.data;
       
       if (levelUp) {
-        toast.success(`LEVEL UP! ${user.activeItem.name} naik level! 🎉`, {
+                toast.success(`LEVEL UP! ${user.activeItem.name} naik level! +${reward} 🎉`, {
              duration: 5000,
             icon: '🚀'
         });
       } else {
-        toast.success(`+${gainedXp} XP! Partner makin setia. 💚`);
+        toast.success(`+${gainedXp} XP dan ${reward}! Partner makin setia. 💚`);
       }
       fetchUserProfile();
     } catch (error) {
@@ -160,19 +160,34 @@ export default function DashboardPage() {
     }
   };
 
-  const handleClaimQuest = () => {
-    if (questClaimed) return;
-    setQuestClaimed(true);
-    if (user) {
-        setUser({ ...user, gameTickets: user.gameTickets + 1 });
-    }
-    toast.success('Quest Selesai! +1 Tiket Emas', { icon: '🎟️' });
-  };
-
   const handleLogout = () => {
     Cookies.remove('token');
     router.push('/login');
   };
+
+    const handleExchange = async () => {
+        if (!user || user.ijoCoins < 30) {
+            toast.error('Koin tidak cukup. Butuh 30 Ijo Coins.');
+            return;
+        }
+
+        setExchangeLoading(true);
+        try {
+            const response = await api.post('/auth/exchange-coins');
+            setUser(prev => prev ? {
+                ...prev,
+                ijoCoins: response.data.ijoCoins,
+                gameTickets: response.data.gameTickets,
+            } : null);
+            toast.success('30 Ijo Coins ditukar menjadi 1 Ijo Ticket!');
+        } catch (error) {
+            const err = error as ApiError;
+            const msg = err.response?.data?.message || 'Exchange gagal';
+            toast.error(Array.isArray(msg) ? msg[0] : msg);
+        } finally {
+            setExchangeLoading(false);
+        }
+    };
 
   const getItemIcon = (name: string) => {
     const lower = name.toLowerCase();
@@ -217,7 +232,7 @@ export default function DashboardPage() {
         
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-5">
-             <div className="relative group cursor-pointer">
+             <Link href="/dashboard/user" aria-label="Buka profile" className="relative group cursor-pointer">
                 <div className="absolute inset-0 rounded-full bg-linear-to-tr from-[#8ac640] to-emerald-500 blur-md opacity-0 group-hover:opacity-60 transition-opacity duration-500"></div>
                 <div className="relative h-16 w-16 rounded-full p-0.5 bg-[#fefaf0] shadow-lg border-2 border-[#135433]">
                     <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden relative">
@@ -229,7 +244,7 @@ export default function DashboardPage() {
                         />
                     </div>
                 </div>
-             </div>
+             </Link>
              <div>
                 <p className="text-sm font-bold uppercase tracking-wider text-[#8ac640] mb-0.5 flex items-center gap-1">
                     {greeting} <Leaf className="w-3 h-3 fill-[#8ac640]" />
@@ -329,16 +344,31 @@ export default function DashboardPage() {
             <div className="md:col-span-4 flex flex-col gap-6">
                 <div className="flex-1 rounded-[2.5rem] bg-[#fefaf0] p-8 shadow-md border-[6px] border-yellow-400 hover:shadow-xl hover:-translate-y-1 transition-all group relative overflow-hidden">
                     <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-yellow-100 transition-transform group-hover:scale-150 duration-700 pointer-events-none"></div>
-                    <div className="relative z-10 flex flex-col justify-between h-full gap-4">
-                        <div className="flex items-center gap-4">
+                                        <div className="relative z-10 flex flex-col justify-between h-full gap-4">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-center gap-4">
                             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#135433] text-yellow-300 text-3xl shadow-inner group-hover:rotate-12 transition-transform duration-300">🪙</div>
                             <div>
                                 <span className="font-bold text-[#8ac640] text-xs uppercase tracking-wider block">Dompet Saya</span>
                                 <span className="font-black text-[#135433] text-lg tracking-tight">Ijo Coins</span>
                             </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleExchange}
+                                                        disabled={exchangeLoading || user.ijoCoins < 30}
+                                                        title="Tukar 30 Ijo Coins menjadi 1 Ijo Ticket"
+                                                        className="flex shrink-0 items-center gap-1.5 rounded-xl border-2 border-[#135433] px-3 py-2 text-xs font-black text-[#135433] transition-colors hover:bg-[#135433] hover:text-yellow-300 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    >
+                                                        <ArrowRightLeft className="h-3.5 w-3.5" />
+                                                        <span>{exchangeLoading ? 'Menukar...' : 'Exchange'}</span>
+                                                    </button>
                         </div>
                         <div className="border-t-[3px] border-yellow-100/50 pt-4">
-                             <span className="text-5xl font-black text-[#135433] tracking-tighter">{user.ijoCoins}</span>
+                            <div className="flex items-end justify-between gap-3">
+                                <span className="text-5xl font-black text-[#135433] tracking-tighter">{user.ijoCoins}</span>
+                                <span className="text-right text-xs font-black text-[#135433]/50">30 coins = 1 ticket</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -367,86 +397,62 @@ export default function DashboardPage() {
                    <Target className="w-7 h-7" />
                </div>
                <div>
-                   <h3 className="font-black text-[#135433] text-lg">Daily Quest</h3>
-                   <p className="text-sm font-bold text-[#135433]/60">Login atau Scan 1 Sampah hari ini untuk mendapatkan tiket!</p>
+                   <h3 className="font-black text-[#135433] text-lg">Quest</h3>
+                   <p className="text-sm font-bold text-[#135433]/60">Selesaikan quest yang tersedia untuk mendapatkan tiket!</p>
                </div>
            </div>
-           <button 
-               onClick={handleClaimQuest}
-               disabled={questClaimed}
-               className={`px-8 py-4 rounded-2xl font-black flex items-center gap-2 transition-all ${questClaimed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#8ac640] text-[#135433] hover:bg-[#9ad354] shadow-lg hover:-translate-y-1 active:scale-95'}`}
+           <Link
+               href="/dashboard/quest"
+               className="px-8 py-4 rounded-2xl font-black flex items-center gap-2 bg-[#8ac640] text-[#135433] hover:bg-[#9ad354] shadow-lg hover:-translate-y-1 active:scale-95 transition-all"
            >
-               {questClaimed ? <CheckCircle2 className="w-5 h-5" /> : <Target className="w-5 h-5" />}
-               <span>{questClaimed ? 'Telah Diklaim' : 'Klaim Tiket'}</span>
-           </button>
+               <Target className="w-5 h-5" />
+               <span>Lihat Quest</span>
+               <ChevronRight className="w-5 h-5" />
+           </Link>
         </div>
 
-        <div>
-            <div className="flex items-center justify-between mb-8 mt-4">
-                <h2 className="text-2xl font-black text-[#135433] flex items-center gap-3">
-                    <span className="bg-[#8ac640] text-[#135433] p-2 rounded-xl text-xl shadow-sm">🚀</span> 
-                    Aksi Hari Ini
-                </h2>
-                <Link href="/dashboard/game" className="flex items-center gap-1 text-sm font-bold text-[#8ac640] hover:text-[#135433] transition-colors">
-                    Lihat Semua <ChevronRight className="w-4 h-4 stroke-3" />
-                </Link>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                <Link href="/dashboard/scan" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#8ac640]/30 via-[#8ac640]/10 to-transparent rounded-bl-full pointer-events-none"></div>
-                    <div className="relative z-10 p-8 flex flex-col h-full">
-                        <div className="h-20 w-20 mb-6 flex items-center justify-center rounded-3xl bg-[#135433] text-[#8ac640] group-hover:scale-105 transition-transform shadow-md duration-300">
-                            <Recycle className="w-10 h-10" />
-                        </div>
-                        <h3 className="text-3xl font-black text-[#135433] tracking-tight mb-2 uppercase">Pilah2</h3>
-                        <p className="text-sm text-[#135433]/70 font-bold mb-6 pr-2 leading-relaxed">
-                            Pindai sampahmu, temukan nilainya. Ubah sampah menjadi Tiket Emas untuk bumi.
-                        </p>
-                        <div className="mt-auto">
-                            <span className="inline-flex items-center text-sm font-black text-white bg-[#135433] px-5 py-2.5 rounded-full group-hover:bg-[#8ac640] group-hover:text-[#135433] transition-colors duration-300">
-                                PINDAI SEKARANG! <ChevronRight className="w-4 h-4 ml-1 stroke-3" />
-                            </span>
-                        </div>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <Link href="/dashboard/scan" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#8ac640]/30 via-[#8ac640]/10 to-transparent rounded-bl-full pointer-events-none"></div>
+                <div className="relative z-10 p-8 flex flex-col h-full">
+                    <div className="h-20 w-20 mb-6 flex items-center justify-center rounded-3xl bg-[#135433] text-[#8ac640] group-hover:scale-105 transition-transform shadow-md duration-300">
+                        <Recycle className="w-10 h-10" />
                     </div>
-                </Link>
+                    <h3 className="text-3xl font-black text-[#135433] tracking-tight mb-2 uppercase">Pilah2</h3>
+                    <p className="text-sm text-[#135433]/70 font-bold mb-6 pr-2 leading-relaxed">Pindai sampahmu, temukan nilainya. Ubah sampah menjadi Tiket Emas untuk bumi.</p>
+                    <div className="mt-auto">
+                        <span className="inline-flex items-center text-sm font-black text-white bg-[#135433] px-5 py-2.5 rounded-full group-hover:bg-[#8ac640] group-hover:text-[#135433] transition-colors duration-300">PINDAI SEKARANG! <ChevronRight className="w-4 h-4 ml-1 stroke-3" /></span>
+                    </div>
+                </div>
+            </Link>
 
-                <Link href="/dashboard/game" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#135433] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#135433]/30 via-[#135433]/10 to-transparent rounded-bl-full pointer-events-none"></div>
-                    <div className="relative z-10 p-8 flex flex-col h-full">
-                        <div className="h-20 w-20 mb-6 flex items-center justify-center rounded-3xl bg-[#135433] text-[#8ac640] group-hover:scale-105 transition-transform shadow-md duration-300">
-                            <Gamepad2 className="w-10 h-10" />
-                        </div>
-                        <h3 className="text-3xl font-black text-[#135433] tracking-tight mb-2 uppercase">Ijo Games</h3>
-                        <p className="text-sm text-[#135433]/70 font-bold mb-6 pr-2 leading-relaxed">
-                            Bermain dengan tujuan. Ubah kebiasaanmu dan naiki papan peringkat dampak global.
-                        </p>
-                        <div className="mt-auto">
-                            <span className="inline-flex items-center text-sm font-black text-[#8ac640] bg-[#135433] px-5 py-2.5 rounded-full group-hover:bg-[#8ac640] group-hover:text-[#135433] transition-colors duration-300">
-                                MAIN SEKARANG! <ChevronRight className="w-4 h-4 ml-1 stroke-3" />
-                            </span>
-                        </div>
+            <Link href="/dashboard/game" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#135433] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#135433]/30 via-[#135433]/10 to-transparent rounded-bl-full pointer-events-none"></div>
+                <div className="relative z-10 p-8 flex flex-col h-full">
+                    <div className="h-20 w-20 mb-6 flex items-center justify-center rounded-3xl bg-[#135433] text-[#8ac640] group-hover:scale-105 transition-transform shadow-md duration-300">
+                        <Gamepad2 className="w-10 h-10" />
                     </div>
-                </Link>
+                    <h3 className="text-3xl font-black text-[#135433] tracking-tight mb-2 uppercase">Ijo Games</h3>
+                    <p className="text-sm text-[#135433]/70 font-bold mb-6 pr-2 leading-relaxed">Bermain dengan tujuan. Ubah kebiasaanmu dan naiki papan peringkat dampak global.</p>
+                    <div className="mt-auto">
+                        <span className="inline-flex items-center text-sm font-black text-[#8ac640] bg-[#135433] px-5 py-2.5 rounded-full group-hover:bg-[#8ac640] group-hover:text-[#135433] transition-colors duration-300">MAIN SEKARANG! <ChevronRight className="w-4 h-4 ml-1 stroke-3" /></span>
+                    </div>
+                </div>
+            </Link>
 
-                <Link href="/dashboard/leaderboard" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#8ac640]/30 via-[#8ac640]/10 to-transparent rounded-bl-full pointer-events-none"></div>
-                    <div className="relative z-10 p-8 flex flex-col h-full">
-                        <div className="h-20 w-20 mb-6 flex items-center justify-center rounded-3xl bg-[#135433] text-[#8ac640] group-hover:scale-105 transition-transform shadow-md duration-300">
-                            <Trophy className="w-10 h-10" />
-                        </div>
-                        <h3 className="text-3xl font-black text-[#135433] tracking-tight mb-2 uppercase">Klasemen</h3>
-                        <p className="text-sm text-[#135433]/70 font-bold mb-6 pr-2 leading-relaxed">
-                            Cari tahu siapa Pahlawan Ijo minggu ini. Coba yang terbaik untuk berada di atas sana!
-                        </p>
-                        <div className="mt-auto">
-                            <span className="inline-flex items-center text-sm font-black text-white bg-[#135433] px-5 py-2.5 rounded-full group-hover:bg-[#8ac640] group-hover:text-[#135433] transition-colors duration-300">
-                                CEK PERINGKAT! <ChevronRight className="w-4 h-4 ml-1 stroke-3" />
-                            </span>
-                        </div>
+            <Link href="/dashboard/leaderboard" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-linear-to-bl from-[#8ac640]/30 via-[#8ac640]/10 to-transparent rounded-bl-full pointer-events-none"></div>
+                <div className="relative z-10 p-8 flex flex-col h-full">
+                    <div className="h-20 w-20 mb-6 flex items-center justify-center rounded-3xl bg-[#135433] text-[#8ac640] group-hover:scale-105 transition-transform shadow-md duration-300">
+                        <Trophy className="w-10 h-10" />
                     </div>
-                </Link>
-            </div>
+                    <h3 className="text-3xl font-black text-[#135433] tracking-tight mb-2 uppercase">Klasemen</h3>
+                    <p className="text-sm text-[#135433]/70 font-bold mb-6 pr-2 leading-relaxed">Cari tahu siapa Pahlawan Ijo minggu ini. Coba yang terbaik untuk berada di atas sana!</p>
+                    <div className="mt-auto">
+                        <span className="inline-flex items-center text-sm font-black text-white bg-[#135433] px-5 py-2.5 rounded-full group-hover:bg-[#8ac640] group-hover:text-[#135433] transition-colors duration-300">CEK PERINGKAT! <ChevronRight className="w-4 h-4 ml-1 stroke-3" /></span>
+                    </div>
+                </div>
+            </Link>
         </div>
 
         <div className="mt-20 bg-white rounded-[3.5rem] p-8 md:p-12 shadow-xl border-8 border-[#fefaf0] flex flex-col lg:flex-row gap-12 items-center">

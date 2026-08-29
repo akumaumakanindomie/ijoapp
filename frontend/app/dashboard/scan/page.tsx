@@ -19,7 +19,7 @@ const STABILITY_COUNT = 4;
 const THROTTLE_MS = 250; 
 
 export default function ScanPage() {
-  const router = useRouter();
+    const router = useRouter();
 
   const [predictions, setPredictions] = useState<{ className: string; probability: number }[]>([]);
   const [bestGuess, setBestGuess] = useState<string | null>(null);
@@ -74,17 +74,13 @@ export default function ScanPage() {
       toast.success(
         <div className="flex flex-col">
           <span className="font-bold text-sm text-[#135433]">{isManual ? 'Pilah Manual Sukses!' : 'Objek Teridentifikasi!'}</span>
-          <span className="text-xs text-[#135433]/80">Reward: +{data.reward} Koin</span>
+          <span className="text-xs text-[#135433]/80">Reward: {data.reward}</span>
         </div>,
         { duration: 4000, icon: '🎉', style: { borderRadius: '16px', background: '#fefaf0', border: '2px solid #8ac640' } }
       );
 
-      if (data.tickets > 0 && data.newCoinBalance === 0) {
-        setTimeout(() => toast('🎟️ Selamat! Koinmu ditukar jadi Tiket Emas!', { icon: '✨' }), 1000);
-      }
-
-      router.refresh();
-      setTimeout(() => router.push('/dashboard'), 2000);
+        router.refresh();
+        setTimeout(() => router.push('/dashboard'), 2000);
     } catch (error) {
       toast.error('Koneksi terputus. Coba lagi ya pahlawan!', { icon: '🔌' });
       isSendingRef.current = false;
@@ -92,7 +88,7 @@ export default function ScanPage() {
       stabilityCounterRef.current = 0;
       setScanProgress(0);
     }
-  }, [router]);
+    }, [router]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -187,7 +183,7 @@ export default function ScanPage() {
         }
       }
     };
-  }, [handleLapor]);
+    }, [handleLapor]);
 
   return (
     <main className="fixed inset-0 bg-[#fefaf0] overflow-hidden flex flex-col font-sans select-none">
@@ -243,7 +239,7 @@ export default function ScanPage() {
                 
                 <div className="absolute inset-x-0 h-1 bg-[#8ac640]/80 shadow-[0_0_40px_rgba(138,198,64,0.8)] z-10 animate-[scan_3s_ease-in-out_infinite]" />
                 
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] max-w-[280px] aspect-square border-2 border-white/20 rounded-3xl z-10 pointer-events-none">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] max-w-70 aspect-square border-2 border-white/20 rounded-3xl z-10 pointer-events-none">
                     <div className="absolute top-0 left-0 w-8 h-8 border-t-8 border-l-8 border-[#8ac640] rounded-tl-xl -mt-1 -ml-1"></div>
                     <div className="absolute top-0 right-0 w-8 h-8 border-t-8 border-r-8 border-[#8ac640] rounded-tr-xl -mt-1 -mr-1"></div>
                     <div className="absolute bottom-0 left-0 w-8 h-8 border-b-8 border-l-8 border-[#8ac640] rounded-bl-xl -mb-1 -ml-1"></div>
@@ -298,7 +294,7 @@ export default function ScanPage() {
                         <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
                             <div 
                                 className={cn("h-full rounded-full transition-all duration-300", 
-                                    pred.className === bestGuess ? 'bg-gradient-to-r from-[#8ac640] to-emerald-400' : 'bg-gray-300')}
+                                    pred.className === bestGuess ? 'bg-linear-to-r from-[#8ac640] to-emerald-400' : 'bg-gray-300')}
                                 style={{ width: `${pred.probability * 100}%` }}
                             />
                         </div>
@@ -320,7 +316,7 @@ export default function ScanPage() {
                  onClick={() => bestGuess && handleLapor(bestGuess, true)}
                 disabled={!bestGuess || isProcessing}
                 className={cn(
-                    "w-full py-4 md:py-5 rounded-[2rem] font-black text-base md:text-lg tracking-wide flex items-center justify-center gap-3 transition-all duration-300 border-b-4",
+                    "w-full py-4 md:py-5 rounded-4xl font-black text-base md:text-lg tracking-wide flex items-center justify-center gap-3 transition-all duration-300 border-b-4",
                     bestGuess && !isProcessing 
                          ? "bg-[#135433] hover:bg-[#0a311d] text-[#8ac640] border-[#0a311d] shadow-xl active:translate-y-1 active:border-b-0" 
                          : "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"

@@ -6,7 +6,7 @@ import {
   UseGuards,
   Request,
   BadRequestException,
-  Query, // <-- Jangan lupa import Query
+  Query,
 } from '@nestjs/common';
 import { GamesService } from './games.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -39,7 +39,20 @@ export class GamesController {
 
   // Update di sini: Menerima Query Param ?game=...
   @Get('/leaderboard')
-  getLeaderboard(@Query('game') gameType: string) {
-    return this.gamesService.getLeaderboard(gameType);
+  getLeaderboard(
+    @Query('game') gameType: string,
+    @Query('scope') scope: 'all' | 'weekly' = 'all',
+  ) {
+    return this.gamesService.getLeaderboard(gameType, scope);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/leaderboard/me')
+  getMyLeaderboardRank(
+    @Request() req,
+    @Query('game') gameType: string,
+    @Query('scope') scope: 'all' | 'weekly' = 'all',
+  ) {
+    return this.gamesService.getMyLeaderboardRank(req.user.userId, gameType, scope);
   }
 }

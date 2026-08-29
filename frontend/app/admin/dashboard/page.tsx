@@ -21,7 +21,8 @@ import {
   Plus,
   Trash2,
   BookOpen,
-  Video
+  Video,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface HeroSection {
@@ -55,6 +56,14 @@ interface FooterInfo {
 interface TipItem {
   title: string;
   desc: string;
+}
+
+interface PendingRegistration {
+  _id: string;
+  fullName: string;
+  email: string;
+  schoolClass: string;
+  createdAt: string;
 }
 
 interface ArticleItem {
@@ -93,6 +102,32 @@ export default function AdminContentPage() {
     });
 
   const [activeTab, setActiveTab] = useState('hero');
+  const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+
+  const fetchPendingRegistrations = async () => {
+    setPendingLoading(true);
+    try {
+      const response = await api.get('/users/pending');
+      const data = response.data || [];
+      setPendingRegistrations(data);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Gagal memuat pendaftar yang menunggu persetujuan.');
+      setPendingRegistrations([]);
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const handleRegistrationAction = async (userId: string, status: 'active' | 'rejected') => {
+    try {
+      await api.patch(`/users/${userId}/status`, { status });
+      setPendingRegistrations((prev) => prev.filter((item) => item._id !== userId));
+      toast.success(status === 'active' ? 'Akun berhasil disetujui.' : 'Pendaftaran ditolak dan data pengguna berhasil dihapus.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Gagal mengubah status pendaftaran.');
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -124,6 +159,7 @@ export default function AdminContentPage() {
         router.push('/login');
     } else {
         fetchData();
+        fetchPendingRegistrations();
     }
   }, [router]);
 
@@ -215,6 +251,12 @@ export default function AdminContentPage() {
       router.push('/login');
   };
 
+  useEffect(() => {
+    if (activeTab === 'register-approval') {
+      fetchPendingRegistrations();
+    }
+  }, [activeTab]);
+
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
@@ -248,6 +290,14 @@ export default function AdminContentPage() {
                 <ArrowLeft className="w-4 h-4" /> Dashboard
               </Link>
               <div className="h-4 w-px bg-slate-700"></div>
+              <button
+                onClick={() => handleSave(activeTab === 'video' ? 'video_section' : `${activeTab}_section`)}
+                disabled={saving}
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-all hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </button>
               <button onClick={handleLogout} className="text-red-400 hover:text-red-300 flex items-center gap-2 transition-colors">
                   <LogOut className="w-4 h-4" /> Keluar
               </button>
@@ -272,7 +322,7 @@ export default function AdminContentPage() {
                      onClick={() => setActiveTab('video')}
                     className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'video' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
                   >
-                      <video className="w-4 h-4" />
+                      <Video className="w-4 h-4" />
                       Video (Home Page)
                   </button>
 
@@ -282,6 +332,23 @@ export default function AdminContentPage() {
                   >
                       <LogIn className="w-4 h-4" />
                       Login & Register  
+                  </button>
+
+                  <button 
+                     onClick={() => setActiveTab('register-approval')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'register-approval' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  >
+                      <div className="flex w-full items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Approval Register</span>
+                        </div>
+                        {pendingRegistrations.length > 0 && (
+                          <span className="min-w-[1.4rem] rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">
+                            {pendingRegistrations.length}
+                          </span>
+                        )}
+                      </div>
                   </button>
                   
                   <button 
@@ -351,16 +418,6 @@ export default function AdminContentPage() {
                                 )}
                             </div>
 
-                            <div className="pt-6 border-t flex justify-end">
-                                <button 
-                                    onClick={() => handleSave('video_section')}
-                                    disabled={saving}
-                                    className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-                                >
-                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                    {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-                                </button>
-                            </div>
                         </div>
                     )}
                   
@@ -429,16 +486,6 @@ export default function AdminContentPage() {
                               )}
                           </div>
 
-                          <div className="pt-6 border-t flex justify-end">
-                              <button 
-                                 onClick={() => handleSave('hero_section')}
-                                 disabled={saving}
-                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-                              >
-                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-                              </button>
-                          </div>
                       </div>
                   )}
 
@@ -524,17 +571,72 @@ export default function AdminContentPage() {
                              </div>
                           </div>
 
-                          <div className="pt-6 border-t flex justify-end">
-                              <button 
-                                 onClick={() => handleSave('auth_section')}
-                                 disabled={saving}
-                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-                              >
-                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-                              </button>
-                          </div>
                       </div>
+                  )}
+
+                  {activeTab === 'register-approval' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="border-b pb-4 flex items-center justify-between gap-4">
+                        <div>
+                          <h2 className="text-2xl font-black text-slate-800">Approval Registrasi</h2>
+                          <p className="text-slate-500 text-sm">Review akun baru yang menunggu persetujuan admin.</p>
+                        </div>
+                        <button
+                          onClick={fetchPendingRegistrations}
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                        >
+                          Refresh
+                        </button>
+                      </div>
+
+                      {pendingLoading ? (
+                        <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 py-12 text-slate-500">
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Memuat daftar pendaftar...
+                        </div>
+                      ) : pendingRegistrations.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+                          Tidak ada pendaftar yang menunggu persetujuan.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {pendingRegistrations.map((user) => (
+                            <div key={user._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-lg font-bold text-slate-800">{user.fullName}</p>
+                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                                      Pending
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 space-y-1 text-sm text-slate-600">
+                                    <p><span className="font-semibold">Email:</span> {user.email}</p>
+                                    <p><span className="font-semibold">Kelas:</span> {user.schoolClass}</p>
+                                    <p><span className="font-semibold">Daftar:</span> {new Date(user.createdAt).toLocaleString('id-ID')}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-3">
+                                  <button
+                                    onClick={() => handleRegistrationAction(user._id, 'active')}
+                                    className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-500"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleRegistrationAction(user._id, 'rejected')}
+                                    className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500"
+                                  >
+                                    Decline
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {activeTab === 'tips' && (
@@ -595,16 +697,6 @@ export default function AdminContentPage() {
                               ))}
                           </div>
 
-                          <div className="pt-6 border-t flex justify-end">
-                              <button 
-                                 onClick={() => handleSave('tips_section')}
-                                 disabled={saving}
-                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-                              >
-                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-                              </button>
-                          </div>
                       </div>
                   )}
 
@@ -684,16 +776,6 @@ export default function AdminContentPage() {
                               ))}
                           </div>
 
-                          <div className="pt-6 border-t flex justify-end">
-                              <button 
-                                 onClick={() => handleSave('articles_section')}
-                                 disabled={saving}
-                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-                              >
-                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-                              </button>
-                          </div>
                       </div>
                   )}
 
@@ -741,16 +823,6 @@ export default function AdminContentPage() {
                               </div>
                           </div>
 
-                          <div className="pt-6 border-t flex justify-end">
-                              <button 
-                                 onClick={() => handleSave('footer_info')}
-                                 disabled={saving}
-                                 className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-                              >
-                                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-                              </button>
-                          </div>
                       </div>
                   )}
 

@@ -130,7 +130,7 @@ function IjoCatcherGame({ onBack }: { onBack: () => void }) {
 
   const handleStartGame = async () => {
     if (!user || user.gameTickets < GAME_PRICE) {
-      toast.error('Tiket habis!', { icon: '🎟️' });
+      toast.error('Tiket habis!', { id: 'no-game-tickets', icon: '🎟️' });
       return;
     }
     const toastId = toast.loading('Siap-siap...');
@@ -431,7 +431,7 @@ function NeuroSnakeGame({ onBack }: { onBack: () => void }) {
 
   const handleStartGame = async () => {
     if (!user || user.gameTickets < GAME_PRICE) {
-      toast.error('Tiket habis!', { icon: '🎟️' });
+      toast.error('Tiket habis!', { id: 'no-game-tickets', icon: '🎟️' });
       return;
     }
     const toastId = toast.loading('Memulai Neuro Snake...');
@@ -631,7 +631,7 @@ function EcoQuizGame({ onBack }: { onBack: () => void }) {
 
   const handleStartGame = async () => {
     if (!user || user.gameTickets < GAME_PRICE) {
-        toast.error('Tiket habis!', { icon: '🎟️' });
+        toast.error('Tiket habis!', { id: 'no-game-tickets', icon: '🎟️' });
         return;
     }
     const toastId = toast.loading('Loading Quiz...');
@@ -774,13 +774,12 @@ function EcoQuizGame({ onBack }: { onBack: () => void }) {
 export default function GameCenterPage() {
   const [activeGame, setActiveGame] = useState<'catcher' | 'snake' | 'quiz' | null>(null);
 
-  if (activeGame === 'catcher') return <IjoCatcherGame onBack={() => setActiveGame(null)} />;
-  if (activeGame === 'snake') return <NeuroSnakeGame onBack={() => setActiveGame(null)} />;
-  if (activeGame === 'quiz') return <EcoQuizGame onBack={() => setActiveGame(null)} />;
-
-  return (
+  let gameContent;
+  if (activeGame === 'catcher') gameContent = <IjoCatcherGame onBack={() => setActiveGame(null)} />;
+  else if (activeGame === 'snake') gameContent = <NeuroSnakeGame onBack={() => setActiveGame(null)} />;
+  else if (activeGame === 'quiz') gameContent = <EcoQuizGame onBack={() => setActiveGame(null)} />;
+  else gameContent = (
     <main className="min-h-screen bg-[#fefaf0] font-sans text-[#135433] pb-20 overflow-x-hidden selection:bg-[#8ac640]/30">
-      <Toaster position="top-center" />
       
       <div className="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none overflow-hidden">
          <div className="absolute top-[-10%] right-[-5%] w-150 h-150 rounded-full bg-[#8ac640]/20 blur-[100px] animate-pulse"></div>
@@ -927,5 +926,12 @@ export default function GameCenterPage() {
         </div>
       </div>
     </main>
+  );
+
+  return (
+    <>
+      <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+      {gameContent}
+    </>
   );
 }

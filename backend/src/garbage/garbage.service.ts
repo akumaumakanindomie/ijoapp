@@ -2,38 +2,38 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
+import { QuestsService } from '../quests/quests.service'; // INJEKSI QUEST SERVICE
 
 @Injectable()
 export class GarbageService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private questsService: QuestsService // DAFTARKAN DI CONSTRUCTOR
+  ) {}
 
-  // LOGIC: User scan sampah -> Dapat Koin & Tiket
   async scanTrash(userId: string, trashCategory: string) {
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
 
-    // ATURAN GAME:
-    // 1 Sampah = 10 Koin
-    // 30 Koin = Otomatis jadi 1 Tiket Game (Opsional, nanti bisa diatur di Frontend)
-
-    const rewardCoins = 10;
-
+    const rewardCoins = 5;
+    const rewardPoints = 5;
     user.ijoCoins += rewardCoins;
-
-    // Logika Bonus: Jika koin sudah banyak, tukar jadi tiket game
-    if (user.ijoCoins >= 10) {
-      user.gameTickets += 1;
-      user.ijoCoins -= 10; // Potong koin, ganti tiket
-    }
+    user.scanPoints = (user.scanPoints || 0) + rewardPoints;
+    user.totalScore = (user.totalScore || 0) + rewardPoints;
+    user.pointHistory = user.pointHistory || [];
+    user.pointHistory.push({ amount: rewardPoints, createdAt: new Date() });
 
     await user.save();
+    await this.questsService.incrementProgress(userId, 'daily-scan', 1);
 
     return {
       message: 'Sampah berhasil dipilah!',
       category: trashCategory,
       newCoinBalance: user.ijoCoins,
+      scanPoints: user.scanPoints,
+      totalScore: user.totalScore,
       tickets: user.gameTickets,
-      reward: `+${rewardCoins} Coins`,
+      reward: `+${rewardCoins} Coins, +${rewardPoints} Points`,
     };
   }
 }

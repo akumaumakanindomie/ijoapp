@@ -37,6 +37,26 @@ export default function LoginPage() {
   const router = useRouter();
   const [content, setContent] = useState<AuthContent | null>(null);
   const [loadingContent, setLoadingContent] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = Cookies.get('token');
+
+    if (token) {
+      try {
+        const payload = token.split('.')[1];
+        const decodedValue = JSON.parse(atob(payload));
+        setIsLoggedIn(true);
+        router.replace(decodedValue.role === 'admin' ? '/admin/dashboard' : '/dashboard');
+      } catch {
+        Cookies.remove('token');
+        setIsLoggedIn(false);
+      }
+    }
+
+    setCheckingAuth(false);
+  }, [router]);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -95,7 +115,7 @@ export default function LoginPage() {
     handleSubmit(onSubmit)();
   };
 
-  if (loadingContent) {
+  if (loadingContent || checkingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
          <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-100 border-t-emerald-600"></div>
@@ -119,8 +139,8 @@ export default function LoginPage() {
 
       <div className="hidden lg:flex w-1/2 relative bg-emerald-950 overflow-hidden flex-col justify-between p-12 text-white">
          <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
-            <div className="absolute top-[-20%] left-[-20%] w-[800px] h-[800px] rounded-full bg-emerald-600/30 blur-[150px]"></div>
-            <div className="absolute bottom-[-20%] right-[-20%] w-[800px] h-[800px] rounded-full bg-teal-600/30 blur-[150px]"></div>
+            <div className="absolute top-[-20%] left-[-20%] w-200 h-200 rounded-full bg-emerald-600/30 blur-[150px]"></div>
+            <div className="absolute bottom-[-20%] right-[-20%] w-200 h-200 rounded-full bg-teal-600/30 blur-[150px]"></div>
         </div>
 
         <div className="relative z-10">
@@ -143,7 +163,7 @@ export default function LoginPage() {
             <div className="space-y-6">
                 <h1 className="text-5xl lg:text-6xl font-black leading-none tracking-tight">
                     {c.login_title_start} <br/> 
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
+                    <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-400 to-teal-300">
                         {c.login_title_end}
                     </span>
                 </h1>
@@ -155,7 +175,7 @@ export default function LoginPage() {
 
         <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl shadow-emerald-900/50 hover:bg-white/10 transition-colors cursor-default">
             <div className="flex items-center gap-5">
-                 <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-2xl shadow-lg">
+                 <div className="h-12 w-12 rounded-2xl bg-linear-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-2xl shadow-lg">
                     🏆                 
                  </div>
                  <div>
@@ -178,7 +198,7 @@ export default function LoginPage() {
                 <p className="text-emerald-800/70 font-medium text-lg">Masukkan kredensial untuk melanjutkan.</p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {!isLoggedIn && <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <div className={`group relative transition-all duration-300 rounded-2xl border-2 bg-emerald-50/30 ${errors.email ? 'border-red-200 bg-red-50' : 'border-emerald-100 focus-within:border-emerald-500 focus-within:bg-white focus-within:shadow-lg focus-within:shadow-emerald-500/10'}`}>
                     <div className="absolute top-1/2 -translate-y-1/2 left-4 text-emerald-800/40 group-focus-within:text-emerald-600 transition-colors">
                         <Mail className="w-5 h-5" />
@@ -221,22 +241,22 @@ export default function LoginPage() {
                         </>
                     )}
                 </button>
-            </form>
+            </form>}
 
-            <div className="relative flex items-center py-2">
-                <div className="flex-grow border-t border-emerald-100"></div>
+            {!isLoggedIn && <div className="relative flex items-center py-2">
+                <div className="grow border-t border-emerald-100"></div>
                 <span className="shrink-0 px-4 text-xs font-bold text-emerald-800/40 uppercase tracking-widest">Atau</span>
-                <div className="flex-grow border-t border-emerald-100"></div>
-            </div>
+                <div className="grow border-t border-emerald-100"></div>
+            </div>}
 
-            <button 
+            {!isLoggedIn && <button 
                 onClick={handleJudgeLogin}
                 type="button"
                 className="w-full rounded-2xl bg-emerald-50 border-2 border-emerald-200 py-4 font-bold text-emerald-700 transition-all hover:bg-emerald-100 hover:border-emerald-300 active:scale-95 flex items-center justify-center gap-2"
             >
                 <UserCheck className="w-5 h-5" />
                 Akses Cepat (Mode Juri)
-            </button>
+              </button>}
 
             <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                 <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -245,14 +265,14 @@ export default function LoginPage() {
                 </p>
             </div>
 
-            <div className="text-center pt-2">
+            {!isLoggedIn && <div className="text-center pt-2">
                 <p className="text-emerald-800/60 font-medium text-sm">
                     Belum punya akun?{' '}
                     <Link href="/register" className="font-extrabold text-emerald-600 hover:text-emerald-500 hover:underline decoration-2 underline-offset-4 transition-all">
                         Daftar Gratis
                     </Link>
                 </p>
-            </div>
+                </div>}
 
          </div>
       </div>

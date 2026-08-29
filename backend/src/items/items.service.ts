@@ -8,12 +8,14 @@ import { Model } from 'mongoose';
 import { Item, ItemDocument } from '../schemas/item.schema';
 import { User, UserDocument } from '../schemas/user.schema';
 import { CreateItemDto } from './dto/create-item.dto';
+import { QuestsService } from '../quests/quests.service';
 
 @Injectable()
 export class ItemsService {
   constructor(
     @InjectModel(Item.name) private itemModel: Model<ItemDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private questsService: QuestsService,
   ) {}
 
   // MARKER: Fungsi Memilih Karakter Awal
@@ -83,6 +85,7 @@ export class ItemsService {
 
     // 3. Logika Tambah XP
     const xpGain = 15;
+    const rewardCoins = 10;
     let currentXp = (item.currentXp || 0) + xpGain;
     let level = item.level;
     let nextLevelXp = item.nextLevelXp || 100;
@@ -104,12 +107,19 @@ export class ItemsService {
 
     await item.save();
 
+    user.ijoCoins += rewardCoins;
+    await user.save();
+
+    await this.questsService.incrementProgress(userId, 'daily-checkin', 1);
+
     return {
       message: 'Check-in berhasil',
       gainedXp: xpGain,
       levelUp,
       level: item.level,
       currentXp: item.currentXp,
+      newCoinBalance: user.ijoCoins,
+      reward: `+${rewardCoins} Coins`,
     };
   }
 }

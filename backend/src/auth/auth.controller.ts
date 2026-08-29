@@ -31,4 +31,10 @@ export class AuthController {
   getProfile(@Request() req) {
     return this.authService.getProfile(req.user.userId);
   }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('exchange-coins')
+  exchangeCoins(@Request() req) {
+    return this.authService.exchangeCoins(req.user.userId);
+  }
 }

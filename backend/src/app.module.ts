@@ -11,6 +11,7 @@ import { GarbageModule } from './garbage/garbage.module';
 import { GamesModule } from './games/games.module';
 import { ContentModule } from './content/content.module';
 import { UsersModule } from './users/users.module';
+import { QuestsModule } from './quests/quests.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { UsersModule } from './users/users.module';
     GamesModule,
     ContentModule,
     UsersModule,
+    QuestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

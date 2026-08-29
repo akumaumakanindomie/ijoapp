@@ -12,6 +12,8 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 
+const COINS_PER_TICKET = 30;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -105,7 +107,29 @@ export class AuthService {
       status: user.status,
       ijoCoins: user.ijoCoins,
       gameTickets: user.gameTickets,
+      scanPoints: user.scanPoints || 0,
+      totalScore: user.totalScore || 0,
       activeItem: user.activeItem,
+    };
+  }
+
+  async exchangeCoins(userId: string) {
+    const user = await this.userModel.findOneAndUpdate(
+      { _id: userId, ijoCoins: { $gte: COINS_PER_TICKET } },
+      { $inc: { ijoCoins: -COINS_PER_TICKET, gameTickets: 1 } },
+      { new: true },
+    );
+
+    if (!user) {
+      const existingUser = await this.userModel.exists({ _id: userId });
+      if (!existingUser) throw new BadRequestException('User tidak ditemukan');
+      throw new BadRequestException('Koin tidak cukup. Butuh 30 Ijo Coins.');
+    }
+
+    return {
+      message: 'Exchange berhasil',
+      ijoCoins: user.ijoCoins,
+      gameTickets: user.gameTickets,
     };
   }
 }

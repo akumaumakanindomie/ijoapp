@@ -69,31 +69,36 @@ export default function LandingPage() {
     fetchData();
   }, []);
 
-  const handleJudgeLogin = async () => {
-    setIsLoggingIn(true);
-    const toastId = toast.loading('Mempersiapkan Akses Juri...');
-    try {
-      const response = await api.post('/auth/login', {
-        email: 'juri@ijo.com',
-        password: 'jurikeren123'
-      });
-      const { accessToken, role } = response.data;
-      
-      Cookies.set('token', accessToken, { expires: 1 });
-      toast.success('Akses Juri Diberikan! Mengalihkan...', { id: toastId, icon: '✅' });
-      
-      setTimeout(() => {
-        if (role === 'admin') {
-            router.push('/admin/dashboard');
-        } else {
-            router.push('/dashboard');
-        }
-      }, 1000);
-    } catch {
-      toast.error('Gagal akses. Pastikan akun Juri sudah didaftarkan!', { id: toastId, duration: 5000 });
-      setIsLoggingIn(false);
-    }
-  };
+const handleJudgeLogin = async (redirectPath?: string) => {
+  setIsLoggingIn(true);
+  const toastId = toast.loading('Mempersiapkan Akses Juri...');
+  try {
+    const response = await api.post('/auth/login', {
+      email: 'juri@ijo.com',
+      password: 'jurikeren123'
+    });
+    const { accessToken, role } = response.data;
+    
+    Cookies.set('token', accessToken, { expires: 1 });
+    toast.success('Akses Juri Diberikan! Mengalihkan...', { id: toastId, icon: '✅' });
+    
+    setTimeout(() => {
+      // 1. Cek jika terdapat parameter path eksplisit dan bertipe string (bukan tipe event handler)
+      if (redirectPath && typeof redirectPath === 'string') {
+          router.push(redirectPath);
+      } 
+      // 2. Jika tidak ada, gunakan redirect bawaan berdasarkan role
+      else if (role === 'admin') {
+          router.push('/admin/dashboard');
+      } else {
+          router.push('/dashboard');
+      }
+    }, 1000);
+  } catch {
+    toast.error('Gagal akses. Pastikan akun Juri sudah didaftarkan!', { id: toastId, duration: 5000 });
+    setIsLoggingIn(false);
+  }
+};
 
    if (loading) {
     return (
@@ -175,7 +180,7 @@ export default function LandingPage() {
             <Link href="/login" className="rounded-full px-6 py-2.5 text-sm font-black text-[#135433] hover:bg-[#8ac640]/10 transition-colors border-2 border-transparent hover:border-[#8ac640]">
               Masuk
             </Link>
-            <button onClick={handleJudgeLogin} disabled={isLoggingIn} className="rounded-full bg-[#135433] px-6 py-2.5 text-sm font-black text-[#8ac640] shadow-lg hover:bg-[#0a311d] hover:shadow-[#135433]/20 transition-all hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed">
+            <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="rounded-full bg-[#135433] px-6 py-2.5 text-sm font-black text-[#8ac640] shadow-lg hover:bg-[#0a311d] hover:shadow-[#135433]/20 transition-all hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed">
               {isLoggingIn ? 'Memproses...' : 'Akses Juri'}
             </button>
           </div>
@@ -208,7 +213,7 @@ export default function LandingPage() {
             
             <div className="pt-2">
               <div className="flex flex-col sm:flex-row gap-4 items-center">
-                <button onClick={handleJudgeLogin} disabled={isLoggingIn} className="w-full sm:w-auto group relative flex items-center justify-center gap-3 overflow-hidden rounded-full bg-emerald-600 px-8 py-4 text-base font-black text-white shadow-xl shadow-emerald-600/40 transition-all hover:scale-105 active:scale-95 border-2 border-emerald-500 animate-pulse hover:animate-none hover:bg-emerald-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:animate-none">
+                <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="w-full sm:w-auto group relative flex items-center justify-center gap-3 overflow-hidden rounded-full bg-emerald-600 px-8 py-4 text-base font-black text-white shadow-xl shadow-emerald-600/40 transition-all hover:scale-105 active:scale-95 border-2 border-emerald-500 animate-pulse hover:animate-none hover:bg-emerald-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:animate-none">
                    {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : <UserCheck className="w-6 h-6" />}
                    <span>{isLoggingIn ? 'Mengarahkan...' : 'Coba Akses Juri (Tamu)'}</span>
                    <div className="absolute inset-0 -translate-x-full bg-linear-to-r from-white/0 via-white/40 to-white/0 skew-x-12 group-hover:animate-[shimmer_1.5s_infinite]"></div>
@@ -307,7 +312,7 @@ export default function LandingPage() {
                    <p className="text-sm font-semibold text-[#135433]/70 mb-8 flex-1">
                       Kamera pintar yang dapat mendeteksi jenis sampah secara otomatis menggunakan model Machine Learning TensorFlow.
                    </p>
-                   <button onClick={handleJudgeLogin} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-[#135433] text-white text-center rounded-xl font-bold hover:bg-[#8ac640] hover:text-[#135433] transition-colors flex items-center justify-center gap-2">
+                   <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-[#135433] text-white text-center rounded-xl font-bold hover:bg-[#8ac640] hover:text-[#135433] transition-colors flex items-center justify-center gap-2">
                       Coba AI Scan <ArrowRight className="w-4 h-4" />
                    </button>
                 </div>
@@ -320,7 +325,7 @@ export default function LandingPage() {
                    <p className="text-sm font-semibold text-[#135433]/70 mb-8 flex-1">
                       Game ketangkasan seru. Uji kecepatanmu dalam memilah dan menangkap sampah sesuai dengan instruksi target.
                    </p>
-                   <button onClick={handleJudgeLogin} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-yellow-400 text-yellow-900 text-center rounded-xl font-bold hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2">
+                   <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-yellow-400 text-yellow-900 text-center rounded-xl font-bold hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2">
                       Mainkan Game <ArrowRight className="w-4 h-4" />
                    </button>
                 </div>
@@ -333,7 +338,7 @@ export default function LandingPage() {
                    <p className="text-sm font-semibold text-[#135433]/70 mb-8 flex-1">
                       Bernostalgia dengan game Snake klasik yang dipadukan dengan misi memakan sampah organik untuk melindungi bumi.
                    </p>
-                   <button onClick={handleJudgeLogin} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-cyan-500 text-white text-center rounded-xl font-bold hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2">
+                   <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-cyan-500 text-white text-center rounded-xl font-bold hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2">
                       Mainkan Game <ArrowRight className="w-4 h-4" />
                    </button>
                 </div>
@@ -346,7 +351,7 @@ export default function LandingPage() {
                    <p className="text-sm font-semibold text-[#135433]/70 mb-8 flex-1">
                       Tantang wawasan lingkunganmu. Jawab pertanyaan dengan cepat dan tepat untuk mendapatkan skor tertinggi.
                    </p>
-                   <button onClick={handleJudgeLogin} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-purple-400 text-white text-center rounded-xl font-bold hover:bg-purple-500 transition-colors flex items-center justify-center gap-2">
+                   <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-purple-400 text-white text-center rounded-xl font-bold hover:bg-purple-500 transition-colors flex items-center justify-center gap-2">
                       Mainkan Kuis <ArrowRight className="w-4 h-4" />
                    </button>
                 </div>
@@ -396,7 +401,7 @@ export default function LandingPage() {
             {data.articles_section && data.articles_section.length > 0 ? (
                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                   {data.articles_section.map((article, idx) => (
-                     <article key={idx} className="bg-white rounded-[2rem] p-5 shadow-xl shadow-emerald-900/5 border-4 border-white flex flex-col hover:-translate-y-2 transition-transform duration-500">
+                     <article key={idx} className="bg-white rounded-4xl p-5 shadow-xl shadow-emerald-900/5 border-4 border-white flex flex-col hover:-translate-y-2 transition-transform duration-500">
                         {article.image && (
                            <div className="w-full h-48 rounded-2xl overflow-hidden shrink-0 border-4 border-[#8ac640]/20 relative mb-5">
                               <Image 
@@ -414,8 +419,12 @@ export default function LandingPage() {
                            <p className="text-[#135433]/80 font-medium leading-relaxed whitespace-pre-wrap text-sm line-clamp-3">
                               {article.content}
                            </p>
-                           <Link href={`/artikel/${article.slug || idx}`} className="mt-auto pt-6 inline-flex items-center text-sm font-black text-[#8ac640] hover:text-[#135433] transition-colors">
-                              Baca Selengkapnya <ArrowRight className="w-4 h-4 ml-2" />
+                           <Link
+                              href={Cookies.get('token') ? `/artikel/${article.slug || idx}` : '/artikel'}
+                              className="mt-auto pt-6 inline-flex items-center text-sm font-black text-[#8ac640] hover:text-[#135433] transition-colors"
+                           >
+                              Baca Selengkapnya
+                              <ArrowRight className="w-4 h-4 ml-2" />
                            </Link>
                         </div>
                      </article>
@@ -444,7 +453,7 @@ export default function LandingPage() {
                   Kumpulkan poin, tukarkan tiket, dan selamatkan bumi.
                </p>
                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                   <button onClick={handleJudgeLogin} disabled={isLoggingIn} className="w-full sm:w-auto rounded-full bg-[#8ac640] border-2 border-[#8ac640] px-10 py-5 text-lg font-black text-[#135433] shadow-xl hover:bg-[#9ad354] hover:scale-105 transition-all disabled:opacity-70 disabled:cursor-not-allowed">
+                   <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="w-full sm:w-auto rounded-full bg-[#8ac640] border-2 border-[#8ac640] px-10 py-5 text-lg font-black text-[#135433] shadow-xl hover:bg-[#9ad354] hover:scale-105 transition-all disabled:opacity-70 disabled:cursor-not-allowed">
                       {isLoggingIn ? 'Memproses...' : 'Akses Cepat Juri'}
                    </button>
                    <Link href="/login" className="w-full sm:w-auto rounded-full bg-transparent border-4 border-[#8ac640] px-10 py-4 text-lg font-black text-[#8ac640] transition-all hover:bg-[#8ac640]/10">
@@ -505,7 +514,7 @@ export default function LandingPage() {
             <div>
                <h4 className="font-black text-[#135433] text-lg mb-6">Akses Cepat</h4>
                <ul className="space-y-3 font-bold text-[#135433]/80">
-                  <li><button onClick={handleJudgeLogin} className="hover:text-[#8ac640] hover:translate-x-1 inline-block transition-transform">Masuk Mode Juri</button></li>
+                  <li><button onClick={() => handleJudgeLogin()} className="hover:text-[#8ac640] hover:translate-x-1 inline-block transition-transform">Masuk Mode Juri</button></li>
                   <li><Link href="/login" className="hover:text-[#8ac640] hover:translate-x-1 inline-block transition-transform">Masuk Akun</Link></li>
                   <li><Link href="/register" className="hover:text-[#8ac640] hover:translate-x-1 inline-block transition-transform">Daftar Baru</Link></li>
                </ul>

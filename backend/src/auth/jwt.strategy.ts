@@ -19,6 +19,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   // Fungsi ini otomatis jalan saat ada request masuk membawa Token
   async validate(payload: any) {
     // Kita kembalikan userId agar bisa dipanggil dengan req.user.userId
-    return { userId: payload.sub, email: payload.email };
+    return {
+      userId: payload.sub,
+      email: payload.email,
+      role: payload.role,
+    };
   }
 }
