@@ -413,7 +413,7 @@ const handleJudgeLogin = async (redirectPath?: string) => {
 
             {data.articles_section && data.articles_section.length > 0 ? (
                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                  {data.articles_section.map((article, idx) => (
+                  {data.articles_section.slice(0, 3).map((article, idx) => (
                      <article key={idx} className="bg-white rounded-4xl p-5 shadow-xl shadow-emerald-900/5 border-4 border-white flex flex-col hover:-translate-y-2 transition-transform duration-500">
                         {article.image && (
                            <div className="w-full h-48 rounded-2xl overflow-hidden shrink-0 border-4 border-[#8ac640]/20 relative mb-5">

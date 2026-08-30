@@ -76,17 +76,50 @@ Reward leaderboard mingguan dibuat dengan aturan:
 - `frontend/app/dashboard/page.tsx`
 
 ### Perubahan tata letak dashboard
-Pada tampilan dashboard, box "Pembagian reward minggu ini" dipindahkan dari posisi paling atas ke area setelah section "Misi Hijau". Tujuannya agar informasi reward muncul lebih relevan saat pengguna melihat misi dan aktivitas utama di dashboard.
+Pada tampilan dashboard, box "Pembagian reward minggu ini" dipindahkan dari area utama ke sisi kanan header profil, tepat di antara nama profil dan tombol keluar. Penempatan baru ini tetap menjaga countdown reward, status rewardDue, serta notifikasi terkait reward minggu ini agar tetap aktif seperti sebelumnya.
 
-### File yang diubah
+### Dokumen perubahan yang diubah
 - `frontend/app/dashboard/page.tsx`
-  - menghapus card reward dari bagian paling atas dashboard
-  - memindahkan card reward ke bawah section "Misi Hijau"
-  - menjaga logika countdown reward, status rewardDue, dan toast notifikasi tetap berjalan seperti sebelumnya
+  - baris sekitar 316-365: memindahkan banner reward ke area header profil
+  - menghapus card reward lama dari bagian bawah section misi agar layout lebih ringkas
+  - mempertahankan logika countdown, status rewardDue, dan notifikasi reward
+- `changelog/changelog.3.md`
+  - baris sekitar 78-96: menambahkan catatan update layout reward dashboard dan daftar file yang berubah
 
 ### Area update
 - file: `frontend/app/dashboard/page.tsx`
-- area: bagian reward banner di dashboard, tepat di bawah section "Misi Hijau" dan sebelum grid menu fitur utama
+- area: header profil dashboard, di antara nama pengguna dan tombol keluar
+
+### Validasi
+- dilakukan pengecekan build frontend dengan perintah `npm run build` di folder `frontend`
+- hasil: build berhasil, `Compiled successfully` dan proses selesai tanpa error
+
+---
+
+## Update pagination artikel dan pembatasan card landing page
+
+### 1. Pembatasan jumlah card artikel di landing page
+Pada section "Artikel Edukasi" di landing page, jumlah card artikel yang tampil dibatasi maksimal 3 item saja. Tujuannya agar tampilan landing page lebih ringkas, fokus, dan tidak terlalu panjang tanpa mengurangi fungsi navigasi ke artikel utama.
+
+### 2. Pagination halaman artikel dengan 6 item per page
+Pada page `/artikel`, daftar artikel dipisahkan per halaman dengan batas 6 artikel setiap halaman. Jika jumlah artikel lebih dari 6, pengguna dapat berpindah ke halaman berikutnya melalui navigasi halaman di bagian bawah seperti pola pagination umum di hasil pencarian atau daftar data.
+
+### 3. Sinkronisasi untuk user login dan guest
+Perubahan pagination diterapkan untuk kedua kondisi akses, baik untuk pengguna yang sudah login maupun guest. Semua route artikel tetap bisa dibuka dengan layout dan navigasi yang konsisten.
+
+### File yang diubah
+- `frontend/app/page.tsx`
+  - baris sekitar 420-455: membatasi section "Artikel Edukasi" hanya menampilkan maksimal 3 artikel
+- `frontend/app/artikel/page.tsx`
+  - baris sekitar 18-36: menambahkan state pagination dan konfigurasi item per halaman
+  - baris sekitar 53-74: reset halaman ke 1 saat data artikel berubah
+  - baris sekitar 162-238: membatasi render artikel ke 6 item per halaman dan menambahkan tombol navigasi halaman sebelumnya/selanjutnya
+
+### Area update
+- file: `frontend/app/page.tsx`
+- area: section "Artikel Edukasi" di landing page
+- file: `frontend/app/artikel/page.tsx`
+- area: daftar artikel dan pagination di halaman /artikel
 
 ### Validasi
 - dilakukan pengecekan build frontend dengan perintah `npm run build` di folder `frontend`

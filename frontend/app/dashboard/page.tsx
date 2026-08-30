@@ -341,11 +341,29 @@ export default function DashboardPage() {
                 </h1>
              </div>
           </div>
-          
-          <button onClick={handleLogout} className="group flex items-center gap-3 rounded-full bg-[#fefaf0] px-6 py-3 text-sm font-bold text-red-500 shadow-sm border-2 border-red-200 transition-all hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-xl hover:-translate-y-0.5">
-               <LogOut className="w-4 h-4 stroke-3" />
-               <span>Keluar</span>
-          </button>
+
+          <div className="flex items-center gap-3 md:justify-end">
+            <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 shadow-md ${rewardDue ? 'border-2 border-[#8ac640] bg-[#f4ffe6] text-[#135433]' : 'border-2 border-[#135433]/10 bg-[#135433] text-[#8ac640]'}`}>
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em]">
+                    <span>{rewardDue ? 'Reward siap dibagikan' : 'Reset Klasemen dalam:'}</span>
+                </div>
+
+                {rewardDue ? (
+                    <span className="text-sm font-black text-[#135433]">Leaderboard mingguan sudah waktunya dibagikan!</span>
+                ) : (
+                    <div className="flex items-center gap-2 text-sm font-black">
+                        <span className="rounded-lg bg-white/10 px-2 py-1">{rewardCountdown.days}d</span>
+                        <span className="rounded-lg bg-white/10 px-2 py-1">{rewardCountdown.hours}j</span>
+                        <span className="rounded-lg bg-white/10 px-2 py-1">{rewardCountdown.minutes}m</span>
+                    </div>
+                )}
+            </div>
+
+            <button onClick={handleLogout} className="group flex items-center gap-3 rounded-full bg-[#fefaf0] px-6 py-3 text-sm font-bold text-red-500 shadow-sm border-2 border-red-200 transition-all hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-xl hover:-translate-y-0.5">
+                 <LogOut className="w-4 h-4 stroke-3" />
+                 <span>Keluar</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
@@ -478,6 +496,18 @@ export default function DashboardPage() {
             </div>
         </div>
 
+        <div className="rounded-3xl border-4 border-emerald-100 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-12 w-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <h3 className="text-xl font-black text-[#135433]">{panduan.title}</h3>
+          </div>
+          <div className="whitespace-pre-line text-sm font-medium leading-relaxed text-[#135433]/75">
+            {panduan.content}
+          </div>
+        </div>
+
         <div className="mt-8 bg-white rounded-3xl p-6 border-4 border-emerald-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:border-[#8ac640]">
            <div className="flex items-center gap-4">
                <div className="h-14 w-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
@@ -498,43 +528,6 @@ export default function DashboardPage() {
            </Link>
         </div>
 
-        <div className="rounded-3xl border-4 border-emerald-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-12 w-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <h3 className="text-xl font-black text-[#135433]">{panduan.title}</h3>
-          </div>
-          <div className="whitespace-pre-line text-sm font-medium leading-relaxed text-[#135433]/75">
-            {panduan.content}
-          </div>
-        </div>
-
-        <div className={`rounded-3xl border-4 p-5 shadow-lg ${rewardDue ? 'border-[#8ac640] bg-[#f4ffe6]' : 'border-[#135433]/10 bg-white'}`}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[#8ac640]">
-                        {rewardDue ? 'Reward siap dibagikan' : 'Pembagian reward minggu ini'}
-                    </p>
-                    <h2 className="text-xl font-black text-[#135433]">
-                        {rewardDue
-                            ? 'Leaderboard mingguan sudah waktunya dibagikan!'
-                            : 'Reward leaderboard akan dibagikan setelah reset minggu berikutnya'}
-                    </h2>
-                </div>
-
-                {!rewardDue && (
-                    <div className="flex items-center gap-3 rounded-2xl bg-[#135433] px-4 py-3 text-[#8ac640] shadow-md">
-                        <span className="text-sm font-black uppercase tracking-wider">Reset</span>
-                        <div className="flex items-center gap-2 text-sm font-black">
-                            <span className="rounded-lg bg-white/10 px-2 py-1">{rewardCountdown.days}d</span>
-                            <span className="rounded-lg bg-white/10 px-2 py-1">{rewardCountdown.hours}j</span>
-                            <span className="rounded-lg bg-white/10 px-2 py-1">{rewardCountdown.minutes}m</span>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Link href="/dashboard/scan" className="group relative overflow-hidden rounded-[2.5rem] bg-[#fefaf0] p-1 shadow-md border-8 border-[#8ac640] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">

@@ -31,6 +31,8 @@ export default function ArtikelPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [greeting, setGreeting] = useState('Halo');
+  const [currentPage, setCurrentPage] = useState(1);
+  const articlesPerPage = 6;
 
   const fetchArticles = async () => {
     setLoading(true);
@@ -72,6 +74,16 @@ export default function ArtikelPage() {
       })
       .finally(() => setAuthChecked(true));
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [articles.length]);
+
+  const totalPages = Math.max(1, Math.ceil(articles.length / articlesPerPage));
+  const paginatedArticles = articles.slice(
+    (currentPage - 1) * articlesPerPage,
+    currentPage * articlesPerPage,
+  );
 
   const handleLogout = () => {
     Cookies.remove('token');
@@ -163,37 +175,76 @@ export default function ArtikelPage() {
             <p className="font-bold text-xl text-[#135433]/40">Kumpulan artikel sedang disiapkan.</p>
           </div>
         ) : (
-          <div className="grid gap-10">
-            {articles.map((article, idx) => (
-              <article key={idx} className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-xl shadow-emerald-900/5 border-4 border-[#fefaf0] flex flex-col md:flex-row gap-8 hover:-translate-y-2 transition-transform duration-500">
-                {article.image && (
-                  <div className="w-full md:w-64 md:h-64 aspect-square rounded-3xl overflow-hidden shrink-0 border-4 border-[#8ac640]/20 relative">
-                    <Image 
-                       src={getDriveImage(article.image)} 
-                       alt={article.title} 
-                       fill
-                       unoptimized
-                       className="object-cover transform hover:scale-105 transition-transform duration-700" 
-                    />
+          <>
+            <div className="grid gap-10">
+              {paginatedArticles.map((article, idx) => (
+                <article key={idx} className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-xl shadow-emerald-900/5 border-4 border-[#fefaf0] flex flex-col md:flex-row gap-8 hover:-translate-y-2 transition-transform duration-500">
+                  {article.image && (
+                    <div className="w-full md:w-64 md:h-64 aspect-square rounded-3xl overflow-hidden shrink-0 border-4 border-[#8ac640]/20 relative">
+                      <Image 
+                         src={getDriveImage(article.image)} 
+                         alt={article.title} 
+                         fill
+                         unoptimized
+                         className="object-cover transform hover:scale-105 transition-transform duration-700" 
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <h3 className="text-3xl font-black leading-tight mb-4 text-[#135433] word-break: normal;">{article.title}</h3>
+                    <div className="w-12 h-1.5 bg-[#8ac640] rounded-full mb-6"></div>
+                    
+                    <p className="text-[#135433]/80 font-medium leading-relaxed whitespace-pre-wrap text-base word-break: normal; line-clamp-4">
+                      {article.content}
+                    </p>
+                    
+                    <div className="mt-auto pt-6">
+                      <Link href={`/artikel/${article.slug || ((currentPage - 1) * articlesPerPage) + idx}`} className="inline-flex items-center text-[#8ac640] font-bold hover:text-[#135433] transition-colors text-sm uppercase tracking-wider">
+                        Baca Selengkapnya <ArrowRight className="w-4 h-4 ml-2" />
+                      </Link>
+                    </div>
                   </div>
-                )}
-                <div className="flex-1 flex flex-col min-w-0">
-                  <h3 className="text-3xl font-black leading-tight mb-4 text-[#135433] break-all">{article.title}</h3>
-                  <div className="w-12 h-1.5 bg-[#8ac640] rounded-full mb-6"></div>
-                  
-                  <p className="text-[#135433]/80 font-medium leading-relaxed whitespace-pre-wrap text-base break-all line-clamp-4">
-                    {article.content}
-                  </p>
-                  
-                  <div className="mt-auto pt-6">
-                    <Link href={`/artikel/${article.slug || idx}`} className="inline-flex items-center text-[#8ac640] font-bold hover:text-[#135433] transition-colors text-sm uppercase tracking-wider">
-                      Baca Selengkapnya <ArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-full border-2 border-[#135433] px-4 py-2 text-sm font-black text-[#135433] disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[#135433] hover:text-[#8ac640] transition-colors"
+                >
+                  Sebelumnya
+                </button>
+
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`h-10 min-w-10 rounded-full border-2 px-3 text-sm font-black transition-colors ${
+                      page === currentPage
+                        ? 'border-[#8ac640] bg-[#8ac640] text-[#135433]'
+                        : 'border-[#135433]/20 bg-white text-[#135433] hover:border-[#8ac640] hover:text-[#8ac640]'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={currentPage === totalPages}
+                  className="rounded-full border-2 border-[#135433] px-4 py-2 text-sm font-black text-[#135433] disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[#135433] hover:text-[#8ac640] transition-colors"
+                >
+                  Selanjutnya
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
