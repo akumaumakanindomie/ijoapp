@@ -606,7 +606,7 @@ export default function DashboardPage() {
                            &quot;Perubahan besar selalu dimulai dari langkah kecil. Mari rawat bumi kita hari ini, untuk senyum generasi di masa depan.&quot; 
                          </p>
                         <div className="mt-3 leading-none">
-                            <p className="font-black text-[#135433] text-sm">Bpk. Bebeck</p>
+                            <p className="font-black text-[#135433] text-sm">John Doe</p>
                             <p className="text-[10px] font-bold text-[#8ac640] uppercase tracking-widest mt-1">Aktivis Lingkungan</p>
                         </div>
                     </div>

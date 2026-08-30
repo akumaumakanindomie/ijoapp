@@ -242,25 +242,7 @@ const handleJudgeLogin = async (redirectPath?: string) => {
                       unoptimized
                       className="object-cover transform transition-transform hover:scale-105 duration-700"
                    />
-                   
-                   <div className="absolute bottom-6 left-6 right-6 rounded-3xl bg-[#fefaf0]/95 backdrop-blur-xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-2 border-[#8ac640]">
-                      <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-[#135433] text-[#8ac640] flex items-center justify-center shadow-inner border-2 border-[#8ac640]">
-                               <Leaf className="w-6 h-6 fill-current" />
-                            </div>
-                            <div>
-                               <p className="text-[10px] font-black text-[#135433]/50 uppercase tracking-widest">Sampah Terdeteksi</p>
-                               <p className="text-xl font-black text-[#135433]">1,240 kg</p>
-                            </div>
-                         </div>
-                         <div className="text-right">
-                             <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#8ac640]/20 text-[#135433] border border-[#8ac640]/50 text-xs font-black shadow-sm">
-                               <BarChart3 className="w-4 h-4" /> 12%
-                             </span>
-                         </div>
-                      </div>
-                   </div>
+
                 </div>
              </div>
           </div>
@@ -317,6 +299,19 @@ const handleJudgeLogin = async (redirectPath?: string) => {
                    </button>
                 </div>
 
+                  <div className="bg-white rounded-3xl p-4 shadow-xl border-4 border-emerald-500 hover:-translate-y-2 transition-transform duration-300 flex flex-col min-h-[310px]">
+                   <div className="h-14 w-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center mb-5 shadow-md">
+                      <Target className="w-7 h-7" />
+                   </div>
+                   <h3 className="text-xl font-black text-[#135433] mb-2">Misi Hijau</h3>
+                   <p className="text-sm font-semibold text-[#135433]/70 mb-6 flex-1">
+                      Selesaikan tantangan lingkungan, kumpulkan poin, dan wujudkan perubahan nyata bersama komunitas Ijo Project.
+                   </p>
+                   <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-emerald-500 text-white text-center rounded-xl font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
+                      Lihat Misi <ArrowRight className="w-4 h-4" />
+                   </button>
+                </div>
+
                 <div className="bg-white rounded-3xl p-4 shadow-xl border-4 border-yellow-400 hover:-translate-y-2 transition-transform duration-300 flex flex-col min-h-[310px]">
                    <div className="h-14 w-14 bg-yellow-400 text-yellow-900 rounded-2xl flex items-center justify-center mb-5 shadow-md">
                       <Gamepad2 className="w-7 h-7" />
@@ -356,18 +351,6 @@ const handleJudgeLogin = async (redirectPath?: string) => {
                    </button>
                 </div>
 
-                <div className="bg-white rounded-3xl p-4 shadow-xl border-4 border-emerald-500 hover:-translate-y-2 transition-transform duration-300 flex flex-col min-h-[310px]">
-                   <div className="h-14 w-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center mb-5 shadow-md">
-                      <Target className="w-7 h-7" />
-                   </div>
-                   <h3 className="text-xl font-black text-[#135433] mb-2">Misi Hijau</h3>
-                   <p className="text-sm font-semibold text-[#135433]/70 mb-6 flex-1">
-                      Selesaikan tantangan lingkungan, kumpulkan poin, dan wujudkan perubahan nyata bersama komunitas Ijo Project.
-                   </p>
-                   <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-emerald-500 text-white text-center rounded-xl font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
-                      Lihat Misi <ArrowRight className="w-4 h-4" />
-                   </button>
-                </div>
             </div>
          </div>
       </section>
