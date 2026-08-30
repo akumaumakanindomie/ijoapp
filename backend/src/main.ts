@@ -8,7 +8,8 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [
-      // 👇 TAMBAHKAN LINK FRONTEND BARU DI SINI (Tanpa garis miring '/' di belakang)
+      // 👇 TAMBAHKAN LINK FRONTEND BARU DI SINI (Tanpa garis miring '/' di belakang
+      'https://ijoapp.vercel.app',
       'https://ijo-ijo-app-4hkg.vercel.app',
 
       // Link Production/Utama (Tetap simpan)
