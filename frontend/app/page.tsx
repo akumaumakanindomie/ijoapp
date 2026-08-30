@@ -10,7 +10,7 @@ import TipsCard from '@/app/components/landing/TipsCard';
 import { 
   Mail, MapPin, Instagram, ArrowRight, Lock, 
   Leaf, UserCheck, ShieldCheck, 
-  Scan, Gamepad2, Brain, Activity, Loader2, PlayCircle, BarChart3
+  Scan, Gamepad2, Brain, Activity, Loader2, PlayCircle, BarChart3, Target
 } from 'lucide-react';
 import { getDriveImage } from '@/app/utils/driveHelper';
 
@@ -303,13 +303,13 @@ const handleJudgeLogin = async (redirectPath?: string) => {
                <p className="text-lg text-[#135433]/70 font-medium">Bermain, belajar, dan berdampak langsung untuk lingkungan dalam satu platform terpadu.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white rounded-4xl p-6 shadow-xl border-4 border-[#8ac640] hover:-translate-y-2 transition-transform duration-300 flex flex-col">
-                   <div className="h-16 w-16 bg-[#135433] text-[#8ac640] rounded-2xl flex items-center justify-center mb-6 shadow-md">
-                      <Scan className="w-8 h-8" />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5">
+                <div className="bg-white rounded-3xl p-4 shadow-xl border-4 border-[#8ac640] hover:-translate-y-2 transition-transform duration-300 flex flex-col min-h-[310px]">
+                   <div className="h-14 w-14 bg-[#135433] text-[#8ac640] rounded-2xl flex items-center justify-center mb-5 shadow-md">
+                      <Scan className="w-7 h-7" />
                    </div>
-                   <h3 className="text-2xl font-black text-[#135433] mb-3">Pilah2 AI Scanner</h3>
-                   <p className="text-sm font-semibold text-[#135433]/70 mb-8 flex-1">
+                   <h3 className="text-xl font-black text-[#135433] mb-2">Pilah2 AI Scanner</h3>
+                   <p className="text-sm font-semibold text-[#135433]/70 mb-6 flex-1">
                       Kamera pintar yang dapat mendeteksi jenis sampah secara otomatis menggunakan model Machine Learning TensorFlow.
                    </p>
                    <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-[#135433] text-white text-center rounded-xl font-bold hover:bg-[#8ac640] hover:text-[#135433] transition-colors flex items-center justify-center gap-2">
@@ -317,12 +317,12 @@ const handleJudgeLogin = async (redirectPath?: string) => {
                    </button>
                 </div>
 
-                <div className="bg-white rounded-4xl p-6 shadow-xl border-4 border-yellow-400 hover:-translate-y-2 transition-transform duration-300 flex flex-col">
-                   <div className="h-16 w-16 bg-yellow-400 text-yellow-900 rounded-2xl flex items-center justify-center mb-6 shadow-md">
-                      <Gamepad2 className="w-8 h-8" />
+                <div className="bg-white rounded-3xl p-4 shadow-xl border-4 border-yellow-400 hover:-translate-y-2 transition-transform duration-300 flex flex-col min-h-[310px]">
+                   <div className="h-14 w-14 bg-yellow-400 text-yellow-900 rounded-2xl flex items-center justify-center mb-5 shadow-md">
+                      <Gamepad2 className="w-7 h-7" />
                    </div>
-                   <h3 className="text-2xl font-black text-[#135433] mb-3">Ijo Catcher</h3>
-                   <p className="text-sm font-semibold text-[#135433]/70 mb-8 flex-1">
+                   <h3 className="text-xl font-black text-[#135433] mb-2">Ijo Catcher</h3>
+                   <p className="text-sm font-semibold text-[#135433]/70 mb-6 flex-1">
                       Game ketangkasan seru. Uji kecepatanmu dalam memilah dan menangkap sampah sesuai dengan instruksi target.
                    </p>
                    <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-yellow-400 text-yellow-900 text-center rounded-xl font-bold hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2">
@@ -330,12 +330,12 @@ const handleJudgeLogin = async (redirectPath?: string) => {
                    </button>
                 </div>
 
-                <div className="bg-white rounded-4xl p-6 shadow-xl border-4 border-cyan-500 hover:-translate-y-2 transition-transform duration-300 flex flex-col">
-                   <div className="h-16 w-16 bg-cyan-500 text-white rounded-2xl flex items-center justify-center mb-6 shadow-md">
-                      <Activity className="w-8 h-8" />
+                <div className="bg-white rounded-3xl p-4 shadow-xl border-4 border-cyan-500 hover:-translate-y-2 transition-transform duration-300 flex flex-col min-h-[310px]">
+                   <div className="h-14 w-14 bg-cyan-500 text-white rounded-2xl flex items-center justify-center mb-5 shadow-md">
+                      <Activity className="w-7 h-7" />
                    </div>
-                   <h3 className="text-2xl font-black text-[#135433] mb-3">Neuro Snake</h3>
-                   <p className="text-sm font-semibold text-[#135433]/70 mb-8 flex-1">
+                   <h3 className="text-xl font-black text-[#135433] mb-2">Neuro Snake</h3>
+                   <p className="text-sm font-semibold text-[#135433]/70 mb-6 flex-1">
                       Bernostalgia dengan game Snake klasik yang dipadukan dengan misi memakan sampah organik untuk melindungi bumi.
                    </p>
                    <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-cyan-500 text-white text-center rounded-xl font-bold hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2">
@@ -343,16 +343,29 @@ const handleJudgeLogin = async (redirectPath?: string) => {
                    </button>
                 </div>
 
-                <div className="bg-white rounded-4xl p-6 shadow-xl border-4 border-purple-400 hover:-translate-y-2 transition-transform duration-300 flex flex-col">
-                   <div className="h-16 w-16 bg-purple-400 text-white rounded-2xl flex items-center justify-center mb-6 shadow-md">
-                      <Brain className="w-8 h-8" />
+                <div className="bg-white rounded-3xl p-4 shadow-xl border-4 border-purple-400 hover:-translate-y-2 transition-transform duration-300 flex flex-col min-h-[310px]">
+                   <div className="h-14 w-14 bg-purple-400 text-white rounded-2xl flex items-center justify-center mb-5 shadow-md">
+                      <Brain className="w-7 h-7" />
                    </div>
-                   <h3 className="text-2xl font-black text-[#135433] mb-3">Eco Quiz</h3>
-                   <p className="text-sm font-semibold text-[#135433]/70 mb-8 flex-1">
+                   <h3 className="text-xl font-black text-[#135433] mb-2">Eco Quiz</h3>
+                   <p className="text-sm font-semibold text-[#135433]/70 mb-6 flex-1">
                       Tantang wawasan lingkunganmu. Jawab pertanyaan dengan cepat dan tepat untuk mendapatkan skor tertinggi.
                    </p>
                    <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-purple-400 text-white text-center rounded-xl font-bold hover:bg-purple-500 transition-colors flex items-center justify-center gap-2">
                       Mainkan Kuis <ArrowRight className="w-4 h-4" />
+                   </button>
+                </div>
+
+                <div className="bg-white rounded-3xl p-4 shadow-xl border-4 border-emerald-500 hover:-translate-y-2 transition-transform duration-300 flex flex-col min-h-[310px]">
+                   <div className="h-14 w-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center mb-5 shadow-md">
+                      <Target className="w-7 h-7" />
+                   </div>
+                   <h3 className="text-xl font-black text-[#135433] mb-2">Misi Hijau</h3>
+                   <p className="text-sm font-semibold text-[#135433]/70 mb-6 flex-1">
+                      Selesaikan tantangan lingkungan, kumpulkan poin, dan wujudkan perubahan nyata bersama komunitas Ijo Project.
+                   </p>
+                   <button onClick={() => handleJudgeLogin()} disabled={isLoggingIn} className="mt-auto w-full py-3 bg-emerald-500 text-white text-center rounded-xl font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
+                      Lihat Misi <ArrowRight className="w-4 h-4" />
                    </button>
                 </div>
             </div>

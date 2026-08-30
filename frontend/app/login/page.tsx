@@ -261,7 +261,7 @@ export default function LoginPage() {
             <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                 <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                    Sistem IJO2 dilindungi dengan algoritma enkripsi <strong className="text-slate-700">Bcrypt</strong> dan autentikasi <strong className="text-slate-700">JWT (JSON Web Token)</strong> berstandar industri.
+                    Sistem IJO2 dilindungi dengan algoritma enkripsi yang disebut <strong className="text-slate-700">Love</strong> dan autentikasi berstandar industri.
                 </p>
             </div>
 

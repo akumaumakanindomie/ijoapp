@@ -16,6 +16,24 @@ describe('UsersService', () => {
     service = new UsersService(userModel);
   });
 
+  it('should mark a user as online when heartbeat is received within the TTL window', async () => {
+    userModel.findByIdAndUpdate.mockResolvedValue({
+      _id: 'user-1',
+      lastSeen: new Date(Date.now() - 20000),
+    });
+
+    const result = await service.heartbeat('user-1');
+
+    expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      'user-1',
+      { lastSeen: expect.any(Date) },
+      { new: true },
+    );
+    expect(result.online).toBe(true);
+    expect(result.lastSeen).toBeInstanceOf(Date);
+    expect(result.lastSeen.getTime()).toBeGreaterThan(Date.now() - 60000);
+  });
+
   it('should return only pending student registrations sorted newest first', async () => {
     const pendingUsers = [{ _id: '1', email: 'a@mail.com' }];
     const findQuery = jest.fn().mockReturnValue({

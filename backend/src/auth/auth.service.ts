@@ -12,7 +12,7 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 
-const COINS_PER_TICKET = 30;
+const COINS_PER_TICKET = 25;
 
 @Injectable()
 export class AuthService {

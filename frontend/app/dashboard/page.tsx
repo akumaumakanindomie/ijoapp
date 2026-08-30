@@ -9,7 +9,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
     LogOut, Trophy, Gamepad2, ChevronRight, ArrowRightLeft,
     Sparkles, Leaf, Recycle, ArrowRight, 
-    Quote, Target
+    Quote, Target, BookOpen
 } from 'lucide-react';
 
 interface ItemData {
@@ -27,6 +27,11 @@ interface UserData {
   ijoCoins: number;
   gameTickets: number;
   activeItem?: ItemData;
+}
+
+interface PanduanSection {
+  title: string;
+  content: string;
 }
 
 interface ApiError {
@@ -66,7 +71,14 @@ export default function DashboardPage() {
   const [greeting, setGreeting] = useState('Halo');
   const [showSelectModal, setShowSelectModal] = useState(false);
   const [selectLoading, setSelectLoading] = useState(false);
-    const [exchangeLoading, setExchangeLoading] = useState(false);
+  const [exchangeLoading, setExchangeLoading] = useState(false);
+  const [rewardCountdown, setRewardCountdown] = useState({ days: 0, hours: 0, minutes: 0 });
+  const [rewardDue, setRewardDue] = useState(false);
+  const [rewardToastShown, setRewardToastShown] = useState(false);
+  const [panduan, setPanduan] = useState<PanduanSection>({
+    title: 'Panduan',
+    content: 'Belum ada panduan yang tersedia.',
+  });
 
   useEffect(() => {
     const hours = new Date().getHours();
@@ -75,6 +87,51 @@ export default function DashboardPage() {
     else if (hours < 18) setGreeting('Selamat Sore ⛅');
     else setGreeting('Selamat Malam 🌙');
   }, []);
+
+  useEffect(() => {
+    const getNextWeeklyReset = (now = new Date()) => {
+      const reset = new Date(now);
+      const daysUntilMonday = (8 - reset.getDay()) % 7 || 7;
+      reset.setDate(reset.getDate() + daysUntilMonday);
+      reset.setHours(0, 0, 0, 0);
+      return reset;
+    };
+
+    const updateRewardStatus = () => {
+      const now = new Date();
+      const nextReset = getNextWeeklyReset(now);
+      const diffMs = nextReset.getTime() - now.getTime();
+
+      if (diffMs <= 0) {
+        setRewardDue(true);
+        setRewardCountdown({ days: 0, hours: 0, minutes: 0 });
+        return;
+      }
+
+      const totalMinutes = Math.max(0, Math.floor(diffMs / 60000));
+      const days = Math.floor(totalMinutes / (60 * 24));
+      const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+      const minutes = totalMinutes % 60;
+
+      setRewardDue(false);
+      setRewardCountdown({ days, hours, minutes });
+    };
+
+    updateRewardStatus();
+    const intervalId = window.setInterval(updateRewardStatus, 60000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (!rewardDue || rewardToastShown) return;
+
+    toast.success('Reward leaderboard mingguan sudah siap dibagikan! Cek klasemen sekarang.', {
+      id: 'weekly-reward-ready',
+      duration: 7000,
+      icon: '🎁',
+    });
+    setRewardToastShown(true);
+  }, [rewardDue, rewardToastShown]);
 
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -94,7 +151,38 @@ export default function DashboardPage() {
       router.push('/login');
       return;
     }
+
+    const fetchPanduan = async () => {
+      try {
+        const response = await api.get('/content/public');
+        if (response.data?.panduan_section) {
+          setPanduan({
+            title: response.data.panduan_section.title || 'Panduan',
+            content: response.data.panduan_section.content || 'Belum ada panduan yang tersedia.',
+          });
+        }
+      } catch (error) {
+        console.error('Gagal mengambil panduan:', error);
+      }
+    };
+
+    const sendHeartbeat = async () => {
+      try {
+        await api.post('/users/heartbeat');
+      } catch (error) {
+        console.error('Heartbeat failed:', error);
+      }
+    };
+
+    sendHeartbeat();
+    fetchPanduan();
     fetchUserProfile();
+
+    const intervalId = window.setInterval(() => {
+      sendHeartbeat();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
   }, [fetchUserProfile, router]);
 
   const hasCheckedInToday = () => {
@@ -166,8 +254,8 @@ export default function DashboardPage() {
   };
 
     const handleExchange = async () => {
-        if (!user || user.ijoCoins < 30) {
-            toast.error('Koin tidak cukup. Butuh 30 Ijo Coins.');
+        if (!user || user.ijoCoins < 25) {
+            toast.error('Koin tidak cukup. Butuh 25 Ijo Coins.');
             return;
         }
 
@@ -179,7 +267,7 @@ export default function DashboardPage() {
                 ijoCoins: response.data.ijoCoins,
                 gameTickets: response.data.gameTickets,
             } : null);
-            toast.success('30 Ijo Coins ditukar menjadi 1 Ijo Ticket!');
+            toast.success('25 Ijo Coins ditukar menjadi 1 Ijo Ticket!');
         } catch (error) {
             const err = error as ApiError;
             const msg = err.response?.data?.message || 'Exchange gagal';
@@ -229,7 +317,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="mx-auto max-w-6xl px-6 py-8 space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-5">
              <Link href="/dashboard/user" aria-label="Buka profile" className="relative group cursor-pointer">
@@ -356,8 +443,8 @@ export default function DashboardPage() {
                                                     <button
                                                         type="button"
                                                         onClick={handleExchange}
-                                                        disabled={exchangeLoading || user.ijoCoins < 30}
-                                                        title="Tukar 30 Ijo Coins menjadi 1 Ijo Ticket"
+                                                        disabled={exchangeLoading || user.ijoCoins < 25}
+                                                        title="Tukar 25 Ijo Coins menjadi 1 Ijo Ticket"
                                                         className="flex shrink-0 items-center gap-1.5 rounded-xl border-2 border-[#135433] px-3 py-2 text-xs font-black text-[#135433] transition-colors hover:bg-[#135433] hover:text-yellow-300 disabled:cursor-not-allowed disabled:opacity-40"
                                                     >
                                                         <ArrowRightLeft className="h-3.5 w-3.5" />
@@ -367,7 +454,7 @@ export default function DashboardPage() {
                         <div className="border-t-[3px] border-yellow-100/50 pt-4">
                             <div className="flex items-end justify-between gap-3">
                                 <span className="text-5xl font-black text-[#135433] tracking-tighter">{user.ijoCoins}</span>
-                                <span className="text-right text-xs font-black text-[#135433]/50">30 coins = 1 ticket</span>
+                                <span className="text-right text-xs font-black text-[#135433]/50">25 coins = 1 ticket</span>
                             </div>
                         </div>
                     </div>
@@ -397,8 +484,8 @@ export default function DashboardPage() {
                    <Target className="w-7 h-7" />
                </div>
                <div>
-                   <h3 className="font-black text-[#135433] text-lg">Quest</h3>
-                   <p className="text-sm font-bold text-[#135433]/60">Selesaikan quest yang tersedia untuk mendapatkan tiket!</p>
+                   <h3 className="font-black text-[#135433] text-lg">Misi Hijau</h3>
+                   <p className="text-sm font-bold text-[#135433]/60">Selesaikan Misi Hijau yang tersedia untuk mendapatkan tiket!</p>
                </div>
            </div>
            <Link
@@ -406,9 +493,47 @@ export default function DashboardPage() {
                className="px-8 py-4 rounded-2xl font-black flex items-center gap-2 bg-[#8ac640] text-[#135433] hover:bg-[#9ad354] shadow-lg hover:-translate-y-1 active:scale-95 transition-all"
            >
                <Target className="w-5 h-5" />
-               <span>Lihat Quest</span>
+               <span>Lihat Misi</span>
                <ChevronRight className="w-5 h-5" />
            </Link>
+        </div>
+
+        <div className="rounded-3xl border-4 border-emerald-100 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-12 w-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <h3 className="text-xl font-black text-[#135433]">{panduan.title}</h3>
+          </div>
+          <div className="whitespace-pre-line text-sm font-medium leading-relaxed text-[#135433]/75">
+            {panduan.content}
+          </div>
+        </div>
+
+        <div className={`rounded-3xl border-4 p-5 shadow-lg ${rewardDue ? 'border-[#8ac640] bg-[#f4ffe6]' : 'border-[#135433]/10 bg-white'}`}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[#8ac640]">
+                        {rewardDue ? 'Reward siap dibagikan' : 'Pembagian reward minggu ini'}
+                    </p>
+                    <h2 className="text-xl font-black text-[#135433]">
+                        {rewardDue
+                            ? 'Leaderboard mingguan sudah waktunya dibagikan!'
+                            : 'Reward leaderboard akan dibagikan setelah reset minggu berikutnya'}
+                    </h2>
+                </div>
+
+                {!rewardDue && (
+                    <div className="flex items-center gap-3 rounded-2xl bg-[#135433] px-4 py-3 text-[#8ac640] shadow-md">
+                        <span className="text-sm font-black uppercase tracking-wider">Reset</span>
+                        <div className="flex items-center gap-2 text-sm font-black">
+                            <span className="rounded-lg bg-white/10 px-2 py-1">{rewardCountdown.days}d</span>
+                            <span className="rounded-lg bg-white/10 px-2 py-1">{rewardCountdown.hours}j</span>
+                            <span className="rounded-lg bg-white/10 px-2 py-1">{rewardCountdown.minutes}m</span>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">

@@ -10,10 +10,44 @@ import { User, UserDocument } from '../schemas/user.schema';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 const USERNAME_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
+const PRESENCE_TTL_MS = 60 * 1000;
 
 @Injectable()
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+
+  getPresenceState(lastSeen?: Date | string | null) {
+    if (!lastSeen) return { online: false, lastSeen: null, ttlMs: PRESENCE_TTL_MS };
+
+    const seenAt = new Date(lastSeen).getTime();
+    const now = Date.now();
+    const online = now - seenAt <= PRESENCE_TTL_MS;
+
+    return {
+      online,
+      lastSeen: new Date(lastSeen),
+      ttlMs: PRESENCE_TTL_MS,
+    };
+  }
+
+  async heartbeat(userId: string) {
+    const lastSeen = new Date();
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+      userId,
+      { lastSeen },
+      { new: true },
+    );
+
+    if (!updatedUser) {
+      throw new NotFoundException('User tidak ditemukan');
+    }
+
+    return {
+      ...this.getPresenceState(updatedUser.lastSeen || lastSeen),
+      userId,
+      ttlSeconds: Math.floor(PRESENCE_TTL_MS / 1000),
+    };
+  }
 
   async getProfile(userId: string) {
     const user = await this.userModel.findById(userId).select('-passwordHash').lean();

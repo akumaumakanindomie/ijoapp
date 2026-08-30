@@ -23,6 +23,8 @@ import {
   BookOpen,
   Video,
   ShieldCheck,
+  User,
+  SquarePlay,
 } from 'lucide-react';
 
 interface HeroSection {
@@ -64,6 +66,15 @@ interface PendingRegistration {
   email: string;
   schoolClass: string;
   createdAt: string;
+  status?: string;
+  username?: string;
+}
+
+interface ApprovedUser extends PendingRegistration {
+  username?: string;
+  role?: string;
+  status?: string;
+  lastSeen?: string | null;
 }
 
 interface ArticleItem {
@@ -77,6 +88,19 @@ interface VideoSection {
   video_url: string;
 }
 
+interface UserProfile {
+  _id: string;
+  fullName: string;
+  email: string;
+  schoolClass: string;
+  role: 'user';
+}
+
+interface PanduanSection {
+  title: string;
+  content: string;
+}
+
 interface ContentData {
   hero_section: HeroSection;
   auth_section: AuthSection;
@@ -84,7 +108,9 @@ interface ContentData {
   tips_section: TipItem[];
   articles_section: ArticleItem[];
   video_section: VideoSection;
-  [key: string]: HeroSection | AuthSection | FooterInfo | TipItem[] | ArticleItem[] | VideoSection;
+  panduan_section: PanduanSection;
+  user_section?: UserProfile;
+  [key: string]: HeroSection | AuthSection | FooterInfo | TipItem[] | ArticleItem[] | VideoSection | PanduanSection | UserProfile | undefined;
 }
 
 export default function AdminContentPage() {
@@ -98,12 +124,53 @@ export default function AdminContentPage() {
         footer_info: { about: '', contact: '', address: '', social_ig: '' },
         tips_section: [],
         articles_section: [],
-        video_section: { video_url: '' }, 
+        video_section: { video_url: '' },
+        panduan_section: { title: 'Panduan', content: '' },
+        user_section: { _id: '', fullName: '', email: '', schoolClass: '', role: 'user' },
     });
 
   const [activeTab, setActiveTab] = useState('hero');
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
+  const [approvedUsers, setApprovedUsers] = useState<ApprovedUser[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
+  const [approvedUsersLoading, setApprovedUsersLoading] = useState(false);
+  const [approvedSort, setApprovedSort] = useState<'createdAt' | 'email' | 'username'>('createdAt');
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<string | null>(null);
+
+  const sortApprovedUsers = (users: ApprovedUser[], sortBy: 'createdAt' | 'email' | 'username') => {
+    const sortedUsers = [...users];
+
+    const getEmailDomain = (email?: string) => (email?.split('@')[1] || '').toLowerCase();
+    const getDomainPriority = (email?: string) => {
+      const domain = getEmailDomain(email);
+      return domain.split('.').filter(Boolean).length;
+    };
+
+    sortedUsers.sort((a, b) => {
+      if (sortBy === 'email') {
+        const domainA = getEmailDomain(a.email);
+        const domainB = getEmailDomain(b.email);
+
+        const domainCompare = getDomainPriority(b.email) - getDomainPriority(a.email);
+        if (domainCompare !== 0) return domainCompare;
+
+        const sameDomainCompare = domainA.localeCompare(domainB);
+        if (sameDomainCompare !== 0) return sameDomainCompare;
+
+        return (a.email || '').toLowerCase().localeCompare((b.email || '').toLowerCase());
+      }
+
+      if (sortBy === 'username') {
+        const aName = (a.username || a.fullName || a.email?.split('@')[0] || '').toLowerCase();
+        const bName = (b.username || b.fullName || b.email?.split('@')[0] || '').toLowerCase();
+        return aName.localeCompare(bName);
+      }
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    return sortedUsers;
+  };
 
   const fetchPendingRegistrations = async () => {
     setPendingLoading(true);
@@ -119,13 +186,50 @@ export default function AdminContentPage() {
     }
   };
 
+  const getPresenceState = (lastSeen?: string | null) => {
+    if (!lastSeen) return { online: false };
+
+    const lastSeenTime = new Date(lastSeen).getTime();
+    const online = Date.now() - lastSeenTime <= 60000;
+
+    return { online };
+  };
+
+  const fetchApprovedUsers = async () => {
+    setApprovedUsersLoading(true);
+    try {
+      const response = await api.get('/users');
+      const users = (response.data || []).filter((user: ApprovedUser) => user.role === 'student' && user.status === 'active');
+      setApprovedUsers(sortApprovedUsers(users, approvedSort));
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Gagal memuat data akun siswa yang sudah disetujui.');
+      setApprovedUsers([]);
+    } finally {
+      setApprovedUsersLoading(false);
+    }
+  };
+
   const handleRegistrationAction = async (userId: string, status: 'active' | 'rejected') => {
     try {
       await api.patch(`/users/${userId}/status`, { status });
       setPendingRegistrations((prev) => prev.filter((item) => item._id !== userId));
+      if (status === 'active') {
+        await fetchApprovedUsers();
+      }
       toast.success(status === 'active' ? 'Akun berhasil disetujui.' : 'Pendaftaran ditolak dan data pengguna berhasil dihapus.');
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Gagal mengubah status pendaftaran.');
+    }
+  };
+
+  const handleDeleteApprovedUser = async (userId: string) => {
+    try {
+      await api.delete(`/users/${userId}`);
+      setApprovedUsers((prev) => prev.filter((user) => user._id !== userId));
+      setConfirmDeleteUserId(null);
+      toast.success('Akun siswa berhasil dihapus.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Gagal menghapus akun siswa.');
     }
   };
 
@@ -145,6 +249,7 @@ export default function AdminContentPage() {
                     slug: a.slug || 'article-' + Math.random().toString(36).substr(2, 9)
                 })),
                 video_section: { ...prev.video_section, ...(response.data.video_section || {}) },
+                panduan_section: { ...prev.panduan_section, ...(response.data.panduan_section || {}) },
              }));
         }
       } catch (error) {
@@ -255,7 +360,15 @@ export default function AdminContentPage() {
     if (activeTab === 'register-approval') {
       fetchPendingRegistrations();
     }
+
+    if (activeTab === 'approved-users') {
+      fetchApprovedUsers();
+    }
   }, [activeTab]);
+
+  useEffect(() => {
+    setApprovedUsers(sortApprovedUsers(approvedUsers, approvedSort));
+  }, [approvedSort]);
 
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
@@ -269,7 +382,8 @@ export default function AdminContentPage() {
   const footer = content.footer_info as FooterInfo;
   const tips = content.tips_section as TipItem[];
   const articles = content.articles_section as ArticleItem[];
-  const video = content.video_section as VideoSection;  
+  const video = content.video_section as VideoSection;
+  const panduan = content.panduan_section as PanduanSection;
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] font-sans text-slate-800 flex flex-col">
@@ -286,14 +400,12 @@ export default function AdminContentPage() {
               </div>
           </div>
           <div className="flex items-center gap-4 text-sm font-medium">
-              <Link href="/admin/dashboard" className="text-slate-400 hover:text-white flex items-center gap-2 transition-colors">
-                <ArrowLeft className="w-4 h-4" /> Dashboard
-              </Link>
               <div className="h-4 w-px bg-slate-700"></div>
               <button
                 onClick={() => handleSave(activeTab === 'video' ? 'video_section' : `${activeTab}_section`)}
                 disabled={saving}
-                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-all hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-all 
+                hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
@@ -303,6 +415,41 @@ export default function AdminContentPage() {
               </button>
           </div>
       </nav>
+
+      {confirmDeleteUserId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Konfirmasi Hapus</h3>
+                <p className="text-sm text-slate-500">Akun ini akan dihapus permanen.</p>
+              </div>
+            </div>
+
+            <p className="mb-6 text-sm text-slate-600">
+              Apakah Anda yakin ingin menghapus akun siswa ini? Tindakan ini tidak bisa dibatalkan.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmDeleteUserId(null)}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleDeleteApprovedUser(confirmDeleteUserId)}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 max-w-6xl mx-auto w-full p-6">
           <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden flex flex-col md:flex-row h-[calc(100vh-120px)]">
@@ -315,15 +462,23 @@ export default function AdminContentPage() {
                     className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'hero' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
                   >
                       <Layout className="w-4 h-4" />
-                      Hero (Home Page)
+                      Hero (LandingPage)
                   </button>
                   
                   <button 
                      onClick={() => setActiveTab('video')}
                     className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'video' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
                   >
-                      <Video className="w-4 h-4" />
-                      Video (Home Page)
+                      <SquarePlay className="w-4 h-4" />
+                      Video (LandingPage)
+                  </button>
+
+                  <button 
+                     onClick={() => setActiveTab('panduan')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'panduan' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  >
+                      <BookOpen className="w-4 h-4" />
+                      Panduan (Dashboard)
                   </button>
 
                   <button 
@@ -348,6 +503,18 @@ export default function AdminContentPage() {
                             {pendingRegistrations.length}
                           </span>
                         )}
+                      </div>
+                  </button>
+
+                  <button 
+                     onClick={() => setActiveTab('approved-users')}
+                    className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'approved-users' ? 'bg-white shadow-md text-emerald-600 border border-slate-100' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  >
+                      <div className="flex w-full items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <User className="w-4 h-4" />
+                          <span>User Approved</span>
+                        </div>
                       </div>
                   </button>
                   
@@ -403,7 +570,6 @@ export default function AdminContentPage() {
                                     </p>
                                 </div>
                                 
-                                {/* Opsi tambahan: Preview Iframe di Admin */}
                                 {video.video_url && video.video_url.includes('embed') && (
                                     <div className="p-4 border border-dashed border-slate-300 rounded-2xl bg-slate-50">
                                         <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Preview Video</p>
@@ -418,6 +584,40 @@ export default function AdminContentPage() {
                                 )}
                             </div>
 
+                        </div>
+                    )}
+
+                    {activeTab === 'panduan' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="border-b pb-4">
+                                <h2 className="text-2xl font-black text-slate-800">Edit Panduan</h2>
+                                <p className="text-slate-500 text-sm">Atur isi panduan yang muncul di dashboard user di bawah kotak Misi Hijau.</p>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="group">
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">
+                                        Judul Panduan
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={panduan.title}
+                                        onChange={(e) => handleInputChange('panduan_section', 'title', e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                    />
+                                </div>
+
+                                <div className="group">
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block group-focus-within:text-emerald-600 transition-colors">
+                                        Isi Panduan
+                                    </label>
+                                    <textarea
+                                        value={panduan.content}
+                                        onChange={(e) => handleInputChange('panduan_section', 'content', e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none h-52 resize-none transition-all"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     )}
                   
@@ -634,6 +834,90 @@ export default function AdminContentPage() {
                               </div>
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'approved-users' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="border-b pb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <h2 className="text-2xl font-black text-slate-800">Akun Siswa Terverifikasi</h2>
+                          <p className="text-slate-500 text-sm">Daftar seluruh akun siswa yang sudah disetujui admin.</p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Sort</label>
+                          <select
+                            value={approvedSort}
+                            onChange={(e) => setApprovedSort(e.target.value as 'createdAt' | 'email' | 'username')}
+                            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-500"
+                          >
+                            <option value="createdAt">Tanggal dibuat (latest)</option>
+                            <option value="email">Email sekolah</option>
+                            <option value="username">Abjad (username)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {approvedUsersLoading ? (
+                        <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 py-12 text-slate-500">
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Memuat akun siswa...
+                        </div>
+                      ) : approvedUsers.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+                          Belum ada akun siswa yang aktif.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {approvedUsers.map((user) => {
+                            const initials = (user.fullName || user.email || 'S')
+                              .split(' ')
+                              .filter(Boolean)
+                              .slice(0, 2)
+                              .map((item) => item[0])
+                              .join('')
+                              .toUpperCase() || 'S';
+                            const presence = getPresenceState(user.lastSeen);
+
+                            return (
+                              <div key={user._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-lg font-black text-white shadow-sm">
+                                      {initials}
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-lg font-bold text-slate-800">{user.fullName}</p>
+                                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                                          {user.status === 'active' ? 'Active' : 'Inactive'}
+                                        </span>
+                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${presence.online ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                                          {presence.online ? 'Online' : 'Offline'}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-slate-600"><span className="font-semibold">Email:</span> {user.email}</p>
+                                      <p className="text-sm text-slate-600"><span className="font-semibold">Sekolah/Kelas:</span> {user.schoolClass || 'Belum diisi'}</p>
+                                      <p className="text-sm text-slate-600"><span className="font-semibold">Username:</span> {user.username || user.email?.split('@')[0] || '—'}</p>
+                                      <p className="text-sm text-slate-600"><span className="font-semibold">Tanggal dibuat:</span> {new Date(user.createdAt).toLocaleString('id-ID')}</p>
+                                      <p className="text-xs text-slate-500"><span className="font-semibold">Status online:</span> {presence.online ? 'Aktif dalam 60 detik terakhir' : '-'}</p>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    onClick={() => setConfirmDeleteUserId(user._id)}
+                                    className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500"
+                                  >
+                                    Hapus Akun
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

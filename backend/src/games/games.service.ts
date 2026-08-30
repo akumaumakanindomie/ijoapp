@@ -8,6 +8,19 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
 import { QuestsService } from '../quests/quests.service';
 
+const WEEKLY_LEADERBOARD_REWARDS: Record<number, number> = {
+  1: 300,
+  2: 275,
+  3: 250,
+  4: 225,
+  5: 200,
+  6: 175,
+  7: 150,
+  8: 125,
+  9: 110,
+  10: 100,
+};
+
 @Injectable()
 export class GamesService {
   constructor(
@@ -22,6 +35,56 @@ export class GamesService {
     weeklyReset.setDate(weeklyReset.getDate() + daysUntilMonday);
     weeklyReset.setHours(0, 0, 0, 0);
     return new Date(weeklyReset.getTime() - 7 * 86400000);
+  }
+
+  private getWeeklyRewardAmount(rank: number) {
+    return WEEKLY_LEADERBOARD_REWARDS[rank] ?? 0;
+  }
+
+  async distributeWeeklyLeaderboardRewards() {
+    const weeklyStart = this.getWeeklyStartDate();
+    const users = await this.userModel
+      .find()
+      .select('_id weeklyTotalScore ijoCoins lastWeeklyRewardAt')
+      .sort({ weeklyTotalScore: -1 })
+      .lean();
+
+    const eligibleUsers = users.filter((user) => {
+      const score = Number(user.weeklyTotalScore ?? 0);
+      const lastAward = user.lastWeeklyRewardAt
+        ? new Date(user.lastWeeklyRewardAt)
+        : null;
+
+      return score >= 500 && (!lastAward || lastAward < weeklyStart);
+    });
+
+    const grantedUsers: string[] = [];
+
+    for (const [index, userSummary] of eligibleUsers.slice(0, 10).entries()) {
+      const rank = index + 1;
+      const reward = this.getWeeklyRewardAmount(rank);
+
+      if (!reward) continue;
+
+      const user = await this.userModel.findById(userSummary._id);
+      if (!user) continue;
+
+      const lastAward = user.lastWeeklyRewardAt
+        ? new Date(user.lastWeeklyRewardAt)
+        : null;
+
+      if (lastAward && lastAward >= weeklyStart) continue;
+
+      user.ijoCoins = (user.ijoCoins || 0) + reward;
+      user.lastWeeklyRewardAt = new Date();
+      await user.save();
+      grantedUsers.push(String(userSummary._id));
+    }
+
+    return {
+      totalAwarded: grantedUsers.length,
+      grantedUsers,
+    };
   }
 
   private resetWeeklyScoresIfNeeded(user: UserDocument) {
@@ -121,6 +184,10 @@ export class GamesService {
   }
 
   async getLeaderboard(gameType: string = 'all', scope: 'all' | 'weekly' = 'all') {
+    if (scope === 'weekly') {
+      await this.distributeWeeklyLeaderboardRewards();
+    }
+
     const isWeekly = scope === 'weekly';
     let sortCriteria: any = isWeekly ? { weeklyTotalScore: -1 } : { totalScore: -1 };
 
@@ -143,6 +210,10 @@ export class GamesService {
   }
 
   async getMyLeaderboardRank(userId: string, gameType: string = 'all', scope: 'all' | 'weekly' = 'all') {
+    if (scope === 'weekly') {
+      await this.distributeWeeklyLeaderboardRewards();
+    }
+
     const isWeekly = scope === 'weekly';
     const users = await this.userModel
       .find()

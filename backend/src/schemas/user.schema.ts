@@ -45,6 +45,7 @@ export class User {
   @Prop() schoolClass!: string;
   @Prop({ default: 'student', enum: ['student', 'admin'] }) role!: string;
   @Prop({ default: 'pending', enum: ['pending', 'active', 'rejected'] }) status!: string;
+  @Prop({ type: Date, default: null, nullable: true }) lastSeen?: Date | null;
   @Prop({ default: 0 }) ijoCoins!: number;
   @Prop({ default: 0 }) gameTickets!: number;
   @Prop({ default: 0 }) scanPoints!: number;
@@ -58,6 +59,7 @@ export class User {
   @Prop({ default: 0 }) totalScore!: number;
   @Prop({ default: 0 }) weeklyTotalScore!: number;
   @Prop() weeklyLeaderboardUpdatedAt?: Date;
+  @Prop() lastWeeklyRewardAt?: Date;
   @Prop({ type: Types.ObjectId, ref: 'Item' }) activeItem!: Item;
   @Prop({ default: 'id' }) language!: string;
 

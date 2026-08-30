@@ -52,11 +52,11 @@ export default function ArtikelPage() {
   useEffect(() => {
     fetchArticles();
     const hours = new Date().getHours();
-    if (hours < 11) setGreeting('Selamat Pagi');
-    else if (hours < 15) setGreeting('Selamat Siang');
-    else if (hours < 18) setGreeting('Selamat Sore');
-    else setGreeting('Selamat Malam');
-
+    if (hours < 11) setGreeting('Selamat Pagi 🌅');
+    else if (hours < 15) setGreeting('Selamat Siang ☀️');
+    else if (hours < 18) setGreeting('Selamat Sore ⛅');
+    else setGreeting('Selamat Malam 🌙');
+  
     const token = Cookies.get('token');
     if (!token) {
       setAuthChecked(true);
@@ -91,12 +91,12 @@ export default function ArtikelPage() {
       {isLoggedIn && profile ? (
         <nav className="fixed top-0 z-50 w-full border-b border-[#8ac640]/20 bg-[#fefaf0]/80 px-6 py-4 shadow-sm backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
+            <div className="flex min-w-0 items-center gap-4">
               <button type="button" onClick={() => router.back()} aria-label="Kembali ke halaman sebelumnya" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[#8ac640] bg-white text-[#135433] transition-all hover:bg-[#8ac640] hover:text-white active:scale-95">
                 <ArrowLeft className="h-5 w-5" />
               </button>
 
-              <div className="flex min-w-0 items-center gap-3">
+              <div className="flex min-w-0 items-center gap-2">
                 <Link href="/dashboard/user" aria-label="Buka profile" className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-[#135433] bg-white shadow-lg">
                   <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}&backgroundColor=fefaf0`} alt="Profile" className="h-full w-full object-cover" />
                 </Link>

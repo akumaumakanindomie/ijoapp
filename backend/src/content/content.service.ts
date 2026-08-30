@@ -23,6 +23,11 @@ export class ContentService {
     video_section: {
       video_url: 'https://www.youtube.com/embed/V4CKqr6CtsI', 
     },
+    panduan_section: {
+      title: 'Panduan',
+      content:
+        '1. Buka menu Misi Hijau dan pilih target misi yang ingin diselesaikan.\n2. Lakukan aktivitas sesuai instruksi, seperti memilah sampah atau mengikuti tantangan lingkungan.\n3. Kumpulkan poin dan tukarkan dengan tiket atau hadiah yang tersedia.\n4. Pantau progresmu secara rutin agar misi dapat diselesaikan tepat waktu.',
+    },
     articles_section: [
       
     ],

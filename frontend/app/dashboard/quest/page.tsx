@@ -1,9 +1,8 @@
-// frontend/app/dashboard/quest/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, Clock3, Gamepad2, Leaf, Loader2, ScanLine, Ticket, Trophy } from 'lucide-react';
+import { ArrowLeft, ArrowLeftCircleIcon, ArrowRightCircle, CheckCircle2, Clock3, Gamepad2, Leaf, Loader2, ScanLine, Ticket, Trophy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import toast, { Toaster } from 'react-hot-toast';
@@ -150,9 +149,18 @@ export default function QuestPage() {
       <div className="mx-auto max-w-6xl space-y-10">
         <header className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Link href="/dashboard" className="mb-5 inline-flex items-center gap-2 text-sm font-black text-[#135433]/60 transition-colors hover:text-[#135433]"><ArrowLeft className="h-4 w-4" /> Kembali ke Dashboard</Link>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8ac640]">Misi Hijau</p>
-            <h1 className="mt-2 text-4xl font-black tracking-tight text-[#135433] md:text-5xl">Quest & Ticket</h1>
+            <div className="flex items-center gap-3">
+              <Link href="/dashboard" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[#8ac640] bg-white text-[#135433] transition-all hover:bg-[#8ac640] hover:text-white active:scale-95">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <span className="text-xl font-bold text-[#135433]/70">Dashboard</span>
+            </div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8ac640]"></p>
+            <h1 className="mt-2 text-4xl font-black tracking-tight text-[#135433] md:text-5xl">Misi Hijau</h1>
+            <div>
+              <p className="mt-1 text-sm font-bold text-[#135433]/70">Halo, {user.fullName}! 
+            Berikut adalah misi yang bisa kamu selesaikan untuk mendapatkan tiket</p>
+            </div>
           </div>
           <div className="flex items-center gap-3 rounded-2xl border-4 border-[#8ac640]/40 bg-white px-5 py-4 shadow-sm">
             <Ticket className="h-7 w-7 text-[#8ac640]" />
@@ -160,8 +168,8 @@ export default function QuestPage() {
           </div>
         </header>
 
-        <QuestSection title="Daily Quest" subtitle="Setiap hari" questList={dailyQuests} />
-        <QuestSection title="Weekly Quest" subtitle="Setiap minggu" questList={weeklyQuests} />
+        <QuestSection title="Misi Harian" subtitle="" questList={dailyQuests} />
+        <QuestSection title="Misi Mingguan" subtitle="" questList={weeklyQuests} />
       </div>
     </main>
   );
