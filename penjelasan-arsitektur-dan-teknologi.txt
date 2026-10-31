@@ -1,0 +1,840 @@
+PENJELASAN ARSITEKTUR DAN TEKNOLOGI IJO-IJO APP
+================================================
+
+Dokumen ini menjelaskan workflow aplikasi IJO-IJO, struktur backend dan frontend, hubungan Next.js dengan NestJS, penyimpanan data MongoDB, serta fungsi bahasa dan tipe file yang digunakan.
+
+
+1. GAMBARAN BESAR ARSITEKTUR
+-----------------------------
+Aplikasi menggunakan tiga bagian utama:
+
+1. Frontend Next.js
+   Bertanggung jawab atas tampilan, halaman, form, interaksi user, dan pemanggilan API.
+
+2. Backend NestJS
+   Bertanggung jawab atas REST API, autentikasi, validasi, logika bisnis, dan komunikasi dengan database.
+
+3. MongoDB
+   Bertanggung jawab atas penyimpanan data user, item, konten, quest, skor, dan informasi aplikasi lainnya.
+
+Mongoose menjadi penghubung antara NestJS dan MongoDB.
+
+Alur sederhananya:
+
+Browser / Next.js
+       |
+       | HTTP request menggunakan Axios dan JWT
+       v
+NestJS Backend
+       |
+       | Mongoose
+       v
+MongoDB
+
+Next.js tidak mengakses MongoDB secara langsung. Semua akses database dilakukan melalui API NestJS.
+
+
+2. WORKFLOW BACKEND
+--------------------
+Titik masuk backend adalah:
+
+backend/src/main.ts
+
+Saat backend dijalankan, file ini melakukan beberapa hal:
+
+- Membuat aplikasi NestJS dari AppModule.
+- Mengaktifkan ValidationPipe global.
+- Mengaktifkan CORS agar frontend boleh mengakses backend.
+- Menjalankan server pada process.env.PORT atau port 3000.
+
+Konfigurasi utama module terdapat di:
+
+backend/src/app.module.ts
+
+File tersebut mendaftarkan:
+
+- Koneksi MongoDB.
+- Schema Mongoose.
+- AuthModule.
+- UsersModule.
+- ItemsModule.
+- GamesModule.
+- GarbageModule.
+- ContentModule.
+- QuestsModule.
+
+Koneksi MongoDB ditentukan melalui:
+
+process.env.MONGO_URI || 'mongodb://localhost:27017/ijo2_db'
+
+Jika MONGO_URI tersedia, aplikasi menggunakan database dari environment variable. Jika tidak, aplikasi menggunakan MongoDB lokal dengan database bernama ijo2_db.
+
+
+3. BAGAIMANA NEXT.JS DAN NESTJS BEKERJA SAMA
+---------------------------------------------
+Konfigurasi komunikasi frontend dengan backend terdapat di:
+
+frontend/lib/axios.ts
+
+Konfigurasi utamanya:
+
+baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+
+Artinya:
+
+- Saat deployment, frontend menggunakan URL backend dari NEXT_PUBLIC_API_URL.
+- Saat development lokal, frontend menggunakan http://localhost:3000.
+
+Contoh kode frontend:
+
+api.get('/auth/profile')
+
+Request tersebut akan dikirim ke:
+
+http://localhost:3000/auth/profile
+
+atau ke URL production yang tersimpan di NEXT_PUBLIC_API_URL.
+
+Axios juga membaca token dari cookie bernama token. Jika token tersedia, Axios otomatis menambahkan header:
+
+Authorization: Bearer <token>
+
+Alur request dashboard:
+
+1. User membuka halaman dashboard Next.js.
+2. Next.js memanggil api.get('/auth/profile').
+3. Axios membaca cookie token.
+4. Axios menambahkan JWT ke header Authorization.
+5. Request masuk ke endpoint NestJS GET /auth/profile.
+6. NestJS memvalidasi JWT.
+7. Backend mencari data user di MongoDB.
+8. Backend mengirim response JSON.
+9. Next.js menerima data dan merender dashboard.
+
+
+4. STRUKTUR FILE BACKEND NESTJS
+-------------------------------
+
+4.1 main.ts
+
+File main.ts adalah titik awal aplikasi backend.
+
+Fungsinya:
+
+- Bootstrap aplikasi NestJS.
+- Mengaktifkan CORS.
+- Mengaktifkan validasi global.
+- Menentukan port server.
+
+
+4.2 app.module.ts
+
+File ini adalah root module aplikasi. Semua module utama aplikasi didaftarkan di sini.
+
+
+4.3 Module
+
+Contoh:
+
+backend/src/auth/auth.module.ts
+
+Module menggabungkan bagian-bagian sebuah fitur, seperti:
+
+- Controller.
+- Service.
+- Model/schema MongoDB.
+- JWT.
+- Passport strategy.
+
+Pemisahan berdasarkan module membuat fitur auth, users, items, games, dan fitur lain lebih terorganisasi.
+
+
+4.4 Controller
+
+Contoh:
+
+backend/src/auth/auth.controller.ts
+
+Controller menerima HTTP request dan menentukan endpoint.
+
+Contoh endpoint:
+
+POST /auth/register
+POST /auth/login
+GET /auth/profile
+
+Controller sebaiknya berisi:
+
+- HTTP method dan URL.
+- Pengambilan body request.
+- Pengambilan parameter atau user dari request.
+- Guard autentikasi.
+- Pemanggilan service.
+
+Controller tidak sebaiknya memuat logika database yang kompleks. Logika tersebut diletakkan di service.
+
+
+4.5 Service
+
+Contoh:
+
+backend/src/auth/auth.service.ts
+
+Service berisi logika bisnis aplikasi, seperti:
+
+- Mencari user.
+- Hash password.
+- Membandingkan password.
+- Membuat JWT.
+- Mengambil dan mengubah data MongoDB.
+- Mengatur coin dan tiket.
+- Menangani kondisi error bisnis.
+
+
+4.6 DTO
+
+DTO berarti Data Transfer Object.
+
+Contoh:
+
+backend/src/auth/dto/register.dto.ts
+backend/src/items/dto/create-item.dto.ts
+
+DTO menentukan bentuk data yang boleh masuk ke endpoint.
+
+Contoh data registrasi:
+
+{
+  "email": "siswa@example.com",
+  "password": "rahasia",
+  "fullName": "Budi",
+  "schoolClass": "X IPA 1"
+}
+
+DTO juga dapat digunakan bersama decorator class-validator untuk memvalidasi input.
+
+
+4.7 Schema
+
+Contoh:
+
+backend/src/schemas/user.schema.ts
+backend/src/schemas/item.schema.ts
+
+Schema menentukan bentuk dokumen MongoDB, termasuk:
+
+- Nama field.
+- Tipe data.
+- Field wajib.
+- Nilai default.
+- Enum.
+- Relasi antar-dokumen.
+
+
+4.8 JWT Strategy
+
+File:
+
+backend/src/auth/jwt.strategy.ts
+
+File ini digunakan Passport untuk membaca dan memvalidasi JWT dari header:
+
+Authorization: Bearer <token>
+
+Jika token valid, Passport memasukkan informasi user ke req.user, misalnya:
+
+req.user.userId
+req.user.email
+req.user.role
+
+
+4.9 Spec files
+
+File yang berakhiran .spec.ts digunakan untuk pengujian Jest.
+
+Contoh:
+
+backend/src/auth/auth.service.spec.ts
+backend/src/items/items.service.spec.ts
+backend/src/users/users.service.spec.ts
+
+File ini menguji apakah service atau controller berjalan sesuai harapan.
+
+
+5. WORKFLOW REGISTRASI DAN LOGIN
+-------------------------------
+
+5.1 Registrasi
+
+Endpoint:
+
+POST /auth/register
+
+Alurnya:
+
+1. Frontend mengirim data form registrasi.
+2. AuthController menerima request.
+3. AuthService mencari apakah email sudah digunakan.
+4. Password di-hash menggunakan bcrypt.
+5. User baru dibuat di MongoDB.
+6. User diberi role student.
+7. User diberi status pending.
+8. Backend mengirim response bahwa registrasi menunggu persetujuan admin.
+
+Password tidak disimpan dalam bentuk asli. Yang disimpan adalah passwordHash.
+
+
+5.2 Login
+
+Endpoint:
+
+POST /auth/login
+
+Alurnya:
+
+1. Backend mencari user berdasarkan email.
+2. Password dibandingkan dengan passwordHash menggunakan bcrypt.
+3. Login ditolak jika password salah.
+4. Login ditolak jika status user pending atau rejected.
+5. Backend membuat JWT.
+6. Frontend menerima accessToken.
+7. Frontend menyimpan token ke cookie bernama token.
+8. User diarahkan ke dashboard berdasarkan role.
+
+Payload JWT berisi informasi seperti:
+
+{
+  "sub": "id_user",
+  "email": "siswa@example.com",
+  "role": "student",
+  "fullName": "Budi"
+}
+
+
+6. PROTEKSI HALAMAN DAN API
+---------------------------
+Proteksi routing frontend terdapat di:
+
+frontend/middleware.ts
+
+Middleware melakukan hal-hal berikut:
+
+- Mengecek apakah cookie token tersedia.
+- Membaca role dari payload JWT.
+- Mengarahkan admin ke admin dashboard.
+- Mengarahkan student ke dashboard siswa.
+- Mencegah student membuka route admin.
+- Menghapus token jika token rusak.
+
+Namun middleware frontend bukan satu-satunya sistem keamanan. Backend tetap harus memvalidasi token menggunakan:
+
+@UseGuards(AuthGuard('jwt'))
+
+Backend juga mengecek role admin pada endpoint yang membutuhkan hak admin.
+
+
+7. WORKFLOW DASHBOARD
+---------------------
+File halaman dashboard:
+
+frontend/app/dashboard/page.tsx
+
+Saat dashboard dibuka:
+
+1. Frontend mengecek cookie token.
+2. Frontend memanggil GET /auth/profile.
+3. Frontend memanggil GET /content/public.
+4. Frontend memanggil POST /users/heartbeat.
+5. Heartbeat dikirim kembali setiap 30 detik.
+6. Data user dan item ditampilkan ke halaman.
+
+Jika pengambilan profile gagal, token dihapus dan user diarahkan kembali ke halaman login.
+
+
+8. WORKFLOW MEMILIH ITEM
+------------------------
+Frontend mengirim request:
+
+POST /items/choose
+
+Contoh payload:
+
+{
+  "name": "Si Botol Sakti",
+  "type": "Tumbler",
+  "personality": "Ceria & Energik"
+}
+
+Backend menjalankan proses berikut:
+
+1. Mencari user berdasarkan userId dari JWT.
+2. Mengecek apakah user sudah memiliki activeItem.
+3. Membuat dokumen Item baru di MongoDB.
+4. Memberikan nilai awal level 1.
+5. Memberikan currentXp 0.
+6. Memberikan nextLevelXp 100.
+7. Menyimpan item.
+8. Menyimpan ID item pada field User.activeItem.
+
+Relasi data tersebut adalah:
+
+User.activeItem -> Item._id
+
+Saat profile diambil, Mongoose menggunakan populate('activeItem') untuk mengambil data item secara lengkap.
+
+
+9. WORKFLOW CHECK-IN HARIAN
+---------------------------
+Frontend mengirim:
+
+POST /items/checkin
+
+Backend melakukan:
+
+1. Mencari user dan item aktif.
+2. Mengecek lastCheckIn.
+3. Menolak request jika user sudah check-in pada hari yang sama.
+4. Menambahkan XP sebesar 15.
+5. Menambahkan coin sebesar 10.
+6. Mengecek apakah item naik level.
+7. Mengubah data item.
+8. Mengubah data user.
+9. Menambahkan progress quest daily-checkin.
+10. Mengirim hasil ke frontend.
+
+Perubahan pada item:
+
+currentXp += 15
+lastCheckIn = waktu sekarang
+
+Perubahan pada user:
+
+ijoCoins += 10
+
+Proses ini mengubah lebih dari satu dokumen MongoDB secara terpisah. Untuk sistem dengan trafik tinggi, MongoDB transaction dapat dipertimbangkan agar perubahan lebih konsisten ketika salah satu proses gagal.
+
+
+10. PENYIMPANAN DATA DI MONGODB
+-------------------------------
+MongoDB menyimpan data dalam bentuk dokumen yang mirip JSON.
+
+Contoh dokumen User:
+
+{
+  "_id": "64...",
+  "email": "siswa@example.com",
+  "passwordHash": "$2b$...",
+  "fullName": "Budi",
+  "role": "student",
+  "status": "active",
+  "ijoCoins": 50,
+  "gameTickets": 2,
+  "activeItem": "65..."
+}
+
+Contoh dokumen Item:
+
+{
+  "_id": "65...",
+  "type": "Tumbler",
+  "name": "Si Botol Sakti",
+  "personality": "Ceria & Energik",
+  "level": 2,
+  "currentXp": 20,
+  "nextLevelXp": 150,
+  "lastCheckIn": "2026-09-05T..."
+}
+
+Model Mongoose diakses dari service menggunakan InjectModel.
+
+Contoh operasi database:
+
+this.userModel.findById(userId)
+this.userModel.findOne({ email })
+this.userModel.findByIdAndUpdate(...)
+this.userModel.create(...)
+
+
+11. CONTENT DINAMIS
+-------------------
+Content ditangani oleh:
+
+backend/src/content/content.controller.ts
+backend/src/content/content.service.ts
+
+Endpoint publik:
+
+GET /content/public
+
+Content service memiliki defaultData. Data dari MongoDB akan menggantikan bagian default jika data tersebut tersedia.
+
+Dengan demikian:
+
+- Jika belum ada data content di database, aplikasi menggunakan data default.
+- Jika admin memperbarui content, data disimpan ke MongoDB.
+- Request berikutnya menggunakan data yang sudah diperbarui.
+
+Endpoint update content adalah:
+
+POST /content/update
+
+Endpoint ini seharusnya dilindungi AuthGuard dan pengecekan role admin agar tidak dapat diakses sembarang user.
+
+
+12. STRUKTUR FILE FRONTEND NEXT.JS
+----------------------------------
+
+12.1 app/**/page.tsx
+
+File page.tsx menentukan halaman dan route Next.js.
+
+Contoh:
+
+app/login/page.tsx       -> /login
+app/register/page.tsx    -> /register
+app/dashboard/page.tsx   -> /dashboard
+app/artikel/page.tsx     -> /artikel
+
+
+12.2 layout.tsx
+
+Layout global aplikasi. Biasanya berisi struktur HTML umum, metadata, font, atau provider global.
+
+
+12.3 globals.css
+
+Berisi CSS global dan styling dasar aplikasi.
+
+
+12.4 components/
+
+Berisi komponen UI yang dapat digunakan ulang, seperti Navbar, Hero, TipsCard, dan widget.
+
+
+12.5 lib/
+
+Berisi konfigurasi dan utility bersama.
+
+Contoh:
+
+frontend/lib/axios.ts  -> konfigurasi client HTTP
+frontend/lib/audio.ts  -> fungsi pengelolaan audio
+
+
+12.6 public/
+
+Berisi asset statis seperti suara dan gambar yang dapat diakses browser.
+
+
+12.7 middleware.ts
+
+Menjalankan pemeriksaan sebelum request halaman diproses oleh Next.js.
+
+
+13. MENGAPA TYPESCRIPT BANYAK DIGUNAKAN
+---------------------------------------
+TypeScript adalah JavaScript yang dilengkapi static typing.
+
+Static typing berarti tipe data dapat ditentukan sejak awal.
+
+Contoh JavaScript:
+
+let age = 20;
+age = 'dua puluh';
+
+Kode tersebut mungkin tetap berjalan, tetapi dapat menimbulkan masalah saat aplikasi digunakan.
+
+Contoh TypeScript:
+
+let age: number = 20;
+age = 'dua puluh';
+
+Kode tersebut akan menghasilkan error saat development karena age seharusnya berupa number.
+
+Alasan TypeScript banyak digunakan:
+
+1. Mengurangi error
+
+Kesalahan tipe data dapat ditemukan sebelum aplikasi dijalankan.
+
+2. Autocomplete lebih baik
+
+VS Code dapat memahami fungsi, object, property, dan tipe data.
+
+3. Cocok untuk project besar
+
+Project ini memiliki banyak module seperti auth, users, items, games, garbage, content, dan quests. TypeScript membantu menjaga hubungan antar-file tetap jelas.
+
+4. Menjadi dokumentasi kode
+
+Contoh:
+
+interface UserData {
+  fullName: string;
+  ijoCoins: number;
+  gameTickets: number;
+}
+
+Interface tersebut langsung menjelaskan struktur data user.
+
+5. Cocok untuk frontend dan backend
+
+NestJS dirancang dengan TypeScript. Next.js dan React juga memiliki dukungan TypeScript yang baik.
+
+6. Mendukung library modern
+
+TypeScript dapat digunakan bersama NestJS, Mongoose, React, Next.js, Axios, dan Jest.
+
+TypeScript tidak langsung dijalankan oleh browser atau Node.js. TypeScript biasanya dikompilasi menjadi JavaScript.
+
+TypeScript (.ts atau .tsx)
+          |
+          | compiler/build
+          v
+JavaScript (.js)
+          |
+          v
+Browser atau Node.js
+
+
+14. FUNGSI TIPE FILE YANG DIGUNAKAN
+-----------------------------------
+
+14.1 .ts
+
+File TypeScript biasa tanpa JSX.
+
+Digunakan untuk:
+
+- Service NestJS.
+- Controller NestJS.
+- Module NestJS.
+- Schema Mongoose.
+- DTO.
+- Utility.
+- Konfigurasi tertentu.
+
+Contoh:
+
+backend/src/auth/auth.service.ts
+
+
+14.2 .tsx
+
+File TypeScript yang dapat berisi JSX.
+
+Digunakan untuk komponen React dan halaman Next.js.
+
+Contoh:
+
+frontend/app/login/page.tsx
+
+JSX memungkinkan penulisan struktur UI seperti HTML di dalam TypeScript:
+
+return (
+  <button onClick={handleLogin}>
+    Login
+  </button>
+);
+
+Perbedaannya:
+
+- .ts: TypeScript biasa.
+- .tsx: TypeScript dengan JSX/React UI.
+
+
+14.3 .js
+
+JavaScript biasa. JavaScript adalah bahasa yang dijalankan oleh browser dan Node.js.
+
+TypeScript dikompilasi menjadi JavaScript saat proses build.
+
+
+14.4 .jsx
+
+JavaScript yang berisi JSX.
+
+Fungsinya mirip .tsx, tetapi tidak memiliki pemeriksaan tipe TypeScript.
+
+
+14.5 .json
+
+JSON bukan bahasa pemrograman. JSON adalah format pertukaran data berbasis teks.
+
+JSON digunakan untuk:
+
+- Konfigurasi project.
+- Daftar dependency.
+- Script command.
+- Request API.
+- Response API.
+
+Contoh package.json:
+
+{
+  "name": "frontend",
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build"
+  }
+}
+
+package.json menyimpan nama project, script, dependency, dan devDependency.
+
+Contoh request login dalam JSON:
+
+{
+  "email": "siswa@example.com",
+  "password": "rahasia"
+}
+
+
+14.6 .css
+
+CSS digunakan untuk mengatur tampilan aplikasi, seperti:
+
+- Warna.
+- Ukuran.
+- Jarak.
+- Layout.
+- Responsive design.
+- Animasi.
+
+Contoh file:
+
+frontend/app/globals.css
+
+Project ini juga menggunakan class Tailwind CSS di dalam file TSX.
+
+
+14.7 .mjs
+
+File JavaScript module modern.
+
+Contoh:
+
+eslint.config.mjs
+postcss.config.mjs
+
+MJS digunakan agar Node.js memperlakukan file tersebut sebagai ES Module.
+
+Contoh sistem ES Module:
+
+import sesuatu from 'sesuatu';
+export default config;
+
+
+14.8 .env
+
+File .env menyimpan konfigurasi environment yang berbeda antara lokal dan production.
+
+Contoh:
+
+MONGO_URI=mongodb+srv://...
+JWT_SECRET=...
+NEXT_PUBLIC_API_URL=https://backend.example.com
+
+Pada frontend/lib/axios.ts:
+
+baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+
+NEXT_PUBLIC_ berarti nilai tersebut boleh tersedia di browser. Secret seperti password database dan JWT secret tidak boleh menggunakan prefix tersebut.
+
+
+14.9 File konfigurasi
+
+Contoh file konfigurasi:
+
+next.config.ts       -> konfigurasi Next.js
+nest-cli.json        -> konfigurasi NestJS CLI
+tsconfig.json        -> konfigurasi TypeScript
+eslint.config.mjs    -> aturan pemeriksaan kode
+postcss.config.mjs   -> konfigurasi pemrosesan CSS
+
+
+14.10 .spec.ts
+
+File pengujian TypeScript yang dijalankan oleh Jest.
+
+Digunakan untuk menguji:
+
+- Service.
+- Controller.
+- Response.
+- Penanganan error.
+
+
+14.11 .schema.ts
+
+File schema Mongoose untuk mendefinisikan struktur dokumen MongoDB.
+
+Schema menentukan field, tipe data, required, default, enum, dan relasi.
+
+
+14.12 .dto.ts
+
+File DTO menentukan bentuk data yang masuk ke backend.
+
+DTO berguna untuk:
+
+- Menentukan struktur request.
+- Menambahkan validasi.
+- Membatasi data yang masuk ke service.
+
+
+15. RANGKUMAN HUBUNGAN TEKNOLOGI
+---------------------------------
+
+Page atau component Next.js
+          |
+          | Axios request
+          v
+NestJS Controller
+          |
+          v
+JWT Guard dan DTO
+          |
+          v
+NestJS Service
+          |
+          v
+Mongoose Model
+          |
+          v
+MongoDB
+
+Pembagian tanggung jawab:
+
+- Page/component: tampilan dan interaksi user.
+- Axios: komunikasi HTTP dan pengiriman token.
+- Controller: menerima request.
+- Guard: autentikasi.
+- DTO: mendefinisikan input.
+- Service: menjalankan logika bisnis.
+- Schema/model: mendefinisikan bentuk data MongoDB.
+- MongoDB: menyimpan data secara permanen.
+
+Secara ringkas:
+
+- TypeScript mengatur logika dan tipe data.
+- TSX membuat tampilan React.
+- JSON menyimpan konfigurasi dan data.
+- CSS mengatur tampilan visual.
+- MJS mengatur konfigurasi JavaScript module.
+- ENV menyimpan konfigurasi environment.
+- DTO mendefinisikan input API.
+- Schema mendefinisikan bentuk data MongoDB.
+- Spec menguji kode.
+- JavaScript hasil kompilasi dijalankan oleh browser atau Node.js.
+
+
+16. CATATAN PERBAIKAN TEKNIS
+----------------------------
+
+Beberapa hal yang dapat ditingkatkan:
+
+1. Pindahkan JWT secret dari source code ke environment variable.
+2. Tambahkan decorator validasi pada RegisterDto dan LoginDto.
+3. Lindungi endpoint POST /content/update khusus admin.
+4. Gunakan MongoDB transaction untuk operasi yang mengubah beberapa dokumen sekaligus.
+5. Pertimbangkan penggunaan cookie HttpOnly agar token tidak dapat dibaca JavaScript browser.
